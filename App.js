@@ -22,7 +22,7 @@ import ChatHistoryModal from './components/ChatHistoryModal';
 import SidebarMenu from './components/SidebarMenu';
 
 // Hooks
-import { useAudioRecording } from './hooks/useAudioRecording';
+// import { useAudioRecording } from './hooks/useAudioRecording';
 import { useCamera } from './hooks/useCamera';
 
 // Utils
@@ -60,11 +60,11 @@ const App = () => {
   }, [messages]);
 
   // Custom hooks
-  const {
-    isRecording,
-    startRecording,
-    stopRecording
-  } = useAudioRecording(setInputText, setIsLoading);
+  // const {
+  //   isRecording,
+  //   startRecording,
+  //   stopRecording
+  // } = useAudioRecording(setInputText, setIsLoading);
 
   const {
     isCameraVisible,
@@ -218,11 +218,11 @@ const App = () => {
             inputText={inputText}
             onChangeText={setInputText}
             isLoading={isLoading}
-            isRecording={isRecording}
+            // isRecording={isRecording}
             onOpenCamera={openCamera}
             onPickImage={pickImage}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
+            // onStartRecording={startRecording}
+            // onStopRecording={stopRecording}
             onSendMessage={handleSendMessage}
             theme={theme}
             canSend={canSendMessage}
