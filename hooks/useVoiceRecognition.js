@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
 import VoiceWrapper from '../utils/VoiceWrapper';
 
-export const useAudioRecording = (setInputText, setIsLoading) => {
+export const useVoiceRecognition = (setInputText, setIsLoading) => {
     const [isListening, setIsListening] = useState(false);
     const [partialResults, setPartialResults] = useState([]);
     const [finalResults, setFinalResults] = useState([]);
@@ -22,20 +22,28 @@ export const useAudioRecording = (setInputText, setIsLoading) => {
                 VoiceWrapper.onSpeechResults = onSpeechResults;
                 VoiceWrapper.onSpeechPartialResults = onSpeechPartialResults;
             } catch (error) {
-                console.error('Error setting up Voice listeners:', error);
+                console.warn('Error setting up Voice listeners:', error);
             }
         }
 
         return () => {
             // Cleanup
             if (Platform.OS === 'web' && webRecognition) {
-                webRecognition.stop();
+                try {
+                    webRecognition.stop();
+                } catch (error) {
+                    console.warn('Error stopping web recognition:', error);
+                }
             } else {
-                VoiceWrapper.destroy().then(() => {
-                    VoiceWrapper.removeAllListeners();
-                }).catch(error => {
-                    console.error('Error during Voice cleanup:', error);
-                });
+                try {
+                    VoiceWrapper.destroy().then(() => {
+                        VoiceWrapper.removeAllListeners();
+                    }).catch(error => {
+                        console.warn('Error during Voice cleanup:', error);
+                    });
+                } catch (error) {
+                    console.warn('Error destroying Voice:', error);
+                }
             }
         };
     }, [webRecognition]);
@@ -136,7 +144,7 @@ export const useAudioRecording = (setInputText, setIsLoading) => {
         setPartialResults(e.value);
     };
 
-    const startRecording = async () => {
+    const startListening = async () => {
         try {
             if (Platform.OS === 'web') {
                 // Web Speech API
@@ -146,11 +154,10 @@ export const useAudioRecording = (setInputText, setIsLoading) => {
                 }
 
                 if (isListening) {
-                    await stopRecording();
+                    await stopListening();
                     return;
                 }
 
-                console.log('Starting web speech recognition..');
                 webRecognition.start();
             } else {
                 // Native Voice module
@@ -162,11 +169,10 @@ export const useAudioRecording = (setInputText, setIsLoading) => {
                     }
 
                     if (isListening) {
-                        await stopRecording();
+                        await stopListening();
                         return;
                     }
 
-                    console.log('Starting voice recognition..');
                     await VoiceWrapper.start('vi-VN');
                 } catch (error) {
                     console.error('Voice API error:', error);
@@ -181,13 +187,11 @@ export const useAudioRecording = (setInputText, setIsLoading) => {
         }
     };
 
-    const stopRecording = async () => {
+    const stopListening = async () => {
         try {
             if (Platform.OS === 'web' && webRecognition) {
-                console.log('Stopping web speech recognition..');
                 webRecognition.stop();
             } else {
-                console.log('Stopping voice recognition..');
                 await VoiceWrapper.stop();
             }
             setIsListening(false);
@@ -199,7 +203,7 @@ export const useAudioRecording = (setInputText, setIsLoading) => {
         }
     };
 
-    const cancelRecording = async () => {
+    const cancelListening = async () => {
         try {
             if (Platform.OS === 'web' && webRecognition) {
                 webRecognition.abort();
@@ -212,16 +216,19 @@ export const useAudioRecording = (setInputText, setIsLoading) => {
             setFinalResults([]);
         } catch (error) {
             console.error('Error canceling voice recognition:', error);
+            setIsListening(false);
+            setIsLoading(false);
+            setPartialResults([]);
+            setFinalResults([]);
         }
     };
 
     return {
         isListening,
-        isRecording: isListening, // Alias for backward compatibility
         partialResults,
         finalResults,
-        startRecording,
-        stopRecording,
-        cancelRecording
+        startListening,
+        stopListening,
+        cancelListening
     };
 };

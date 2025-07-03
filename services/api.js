@@ -1,30 +1,57 @@
-// --- API Keys (Chỉ dành cho thử nghiệm) ---
-// ⚠️ CẢNH BÁO BẢO MẬT: Để các key này ở đây là KHÔNG an toàn.
-// Hãy thay thế 'YOUR_API_KEY_HERE' bằng các key thật của bạn.
-import dotenv from 'dotenv';
-dotenv.config();
+// --- API Keys (Sử dụng biến môi trường) ---
+// API keys được lưu trữ trong file .env (không được commit lên git)
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// --- System Prompt được chia sẻ ---
-const DAMAGE_ANALYSIS_PROMPT = `Bạn là chuyên gia AI chuyên phân tích thiệt hại xây dựng.
+const DAMAGE_ANALYSIS_PROMPT = `Tôi sẽ cung cấp hình ảnh một vị trí hư hại trong công trình xây dựng (nhà dân dụng hoặc công trình nhỏ).
 
-**Quy tắc quan trọng: Toàn bộ phản hồi của bạn PHẢI bằng tiếng Việt.** Tất cả tiêu đề, bước và mô tả phải bằng tiếng Việt.
+Hãy phân tích kỹ hình ảnh này và trả lời thật chi tiết, kỹ thuật, theo đúng 5 nội dung sau:
 
-Dựa trên hình ảnh và/hoặc mô tả được cung cấp, hãy phân tích và trả về kết quả theo định dạng có cấu trúc sau:
 
-- **Loại thiệt hại:** [Xác định rõ loại thiệt hại, ví dụ: Vết nứt tường, Sơn bong tróc, Nấm mốc, Bê tông bị bong...]
-- **Vị trí:** [Mô tả vị trí xuất hiện thiệt hại]
-- **Mức độ nghiêm trọng:** [Đánh giá mức độ từ Thấp, Trung bình đến Cao]
-- **Nguyên nhân có thể:** [Liệt kê các nguyên nhân có thể gây ra thiệt hại này]
-- **Quy trình sửa chữa:** [Liệt kê tất cả các bước cần thiết theo thứ tự (Bước 1, Bước 2, Bước 3, ...). Số lượng bước có thể thay đổi tùy thuộc vào thiệt hại.]
-    **Bước 1:** [Ví dụ về bước đầu tiên, như chuẩn bị bề mặt]
-    **Bước 2:** [Ví dụ về bước tiếp theo]
-    **... (tiếp tục với tất cả các bước cần thiết)**
+1. Loại hư hại:
+ • Đây là loại hư hại gì (nứt, thấm, bong tróc, mốc, võng trần, vỡ gạch, xê dịch kết cấu,…)?
+ • Mô tả hình dạng, kích thước, hướng phát triển của vết nứt/hư hại đó.
+ • Có dấu hiệu gì cho thấy hư hại này đang tiếp tục phát triển hay không?
 
-Hãy cung cấp thông tin chi tiết và chuyên môn cho từng phần.
+2. Vị trí và loại cấu kiện bị ảnh hưởng:
+ • Đây là tường trong, tường ngoài, trần, sàn, móng,…?
+ • Có khả năng là tường chịu lực hay không?
+ • Có nguy cơ ảnh hưởng kết cấu hay chỉ ảnh hưởng thẩm mỹ?
 
-**Quan trọng: Chỉ cung cấp các phần được liệt kê rõ ràng ở trên. Không thêm các danh mục khác như 'Chi phí ước tính' hoặc 'Biện pháp phòng ngừa'.**`;
+
+3. Mức độ hư hại:
+ • Phân loại mức độ: Nhẹ / Trung bình / Nặng.
+ • Nêu rõ lý do tại sao phân loại như vậy.
+ • Nếu có nguy cơ mất an toàn công trình, hãy nêu rõ cảnh báo.
+
+
+4. Nguyên nhân tiềm ẩn:
+ • Dự đoán các nguyên nhân kỹ thuật có thể gây ra tình trạng này.
+ • Nếu có thể, phân nhóm nguyên nhân: do thi công – do vật liệu – do môi trường – do nền móng – do tải trọng.
+ • Nêu rõ dấu hiệu nào trong ảnh khiến bạn nghi ngờ nguyên nhân đó.
+
+
+5. Hướng dẫn xử lý và sửa chữa:
+ • Mô tả từng bước xử lý chi tiết, theo trình tự thực tế ngoài công trình.
+ • Gợi ý vật liệu và phương pháp phù hợp: keo trám, vữa, sơn chống thấm, epoxy,…
+ • Nếu có nhiều phương án, hãy liệt kê ưu – nhược điểm ngắn gọn.
+ • Đưa ra khuyến nghị có nên gọi kỹ sư chuyên môn đến kiểm tra hiện trường không.
+
+
+Trình bày dưới dạng các tiêu đề rõ ràng, dễ hiểu, như một báo cáo đánh giá hiện trạng kỹ thuật.
+Tránh dùng thuật ngữ quá phức tạp trừ khi cần thiết.
+
+
+📝 Ghi chú:
+
+Bạn có thể thêm phần mở đầu như sau nếu cần cụ thể hóa thêm bối cảnh:
+
+ • Đây là công trình nhà ở dân dụng, tuổi đời 10 năm, nền đất yếu.
+ • Vết nứt nằm gần nhà tắm hoặc cửa sổ, có dấu hiệu bị ẩm kéo dài.
+ • Tôi nghi ngờ có lún nền hoặc thấm nước từ phòng tắm.`;
+
+
+
 
 const GENERAL_CHAT_PROMPT = `Bạn là trợ lý AI thông minh và hữu ích chuyên về xây dựng và bảo trì công trình.
 

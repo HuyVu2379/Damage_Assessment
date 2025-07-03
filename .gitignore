@@ -40,4 +40,4 @@ yarn-error.*
 *.tsbuildinfo
 
 # lib package
-.package-lock.json
+./package-lock.json

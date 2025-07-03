@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { Provider as PaperProvider } from 'react-native-paper';
 
@@ -17,6 +18,8 @@ import ModelSelectionModal from './components/ModelSelectionModal';
 import CameraModal from './components/CameraModal';
 import ImagePreview from './components/ImagePreview';
 import ChatInput from './components/ChatInput';
+import ChatHistoryModal from './components/ChatHistoryModal';
+import SidebarMenu from './components/SidebarMenu';
 
 // Hooks
 import { useAudioRecording } from './hooks/useAudioRecording';
@@ -28,6 +31,7 @@ import { verticalScale, scale } from './utils/scaling';
 
 // API
 import { getAiResponse } from './services/api';
+import { chatStorage } from './services/chatStorage';
 
 const App = () => {
   const [messages, setMessages] = useState([
@@ -38,8 +42,22 @@ const App = () => {
   const [selectedModel, setSelectedModel] = useState('groq');
   const [pickedImage, setPickedImage] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [chatHistoryVisible, setChatHistoryVisible] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const flatListRef = useRef(null);
+
+  // Load cuộc trò chuyện cuối cùng khi app khởi động
+  useEffect(() => {
+    loadLastConversation();
+  }, []);
+
+  // Auto-save cuộc trò chuyện hiện tại khi có thay đổi
+  useEffect(() => {
+    if (messages.length > 1) {
+      chatStorage.saveCurrentChat(messages);
+    }
+  }, [messages]);
 
   // Custom hooks
   const {
@@ -55,6 +73,28 @@ const App = () => {
     takePicture,
     pickImage
   } = useCamera(setPickedImage);
+
+  // Load cuộc trò chuyện cuối cùng
+  const loadLastConversation = async () => {
+    const lastMessages = await chatStorage.loadCurrentChat();
+    if (lastMessages && lastMessages.length > 1) {
+      setMessages(lastMessages);
+    }
+  };
+
+  // Bắt đầu cuộc trò chuyện mới
+  const startNewChat = () => {
+    setMessages([{ role: 'system', content: 'Chào bạn, hãy chọn model và bắt đầu!' }]);
+    setInputText('');
+    setPickedImage(null);
+  };
+
+  // Load cuộc trò chuyện đã lưu
+  const loadConversation = (savedMessages) => {
+    setMessages(savedMessages);
+    setInputText('');
+    setPickedImage(null);
+  };
 
   // Handlers
   const selectModel = (model) => {
@@ -107,12 +147,31 @@ const App = () => {
   return (
     <PaperProvider theme={theme}>
       <SafeAreaView style={styles.container}>
+        {/* Sidebar Menu */}
+        <SidebarMenu
+          visible={sidebarVisible}
+          onClose={() => setSidebarVisible(false)}
+          onNewChat={startNewChat}
+          onLoadConversation={loadConversation}
+          currentMessages={messages}
+          theme={theme}
+        />
+
         {/* Camera Modal */}
         <CameraModal
           visible={isCameraVisible}
           onClose={() => setIsCameraVisible(false)}
           onTakePicture={takePicture}
           onPickImage={pickImage}
+        />
+
+        {/* Chat History Modal */}
+        <ChatHistoryModal
+          visible={chatHistoryVisible}
+          onClose={() => setChatHistoryVisible(false)}
+          onLoadConversation={loadConversation}
+          currentMessages={messages}
+          theme={theme}
         />
 
         {/* Model Selection Modal */}
@@ -127,6 +186,8 @@ const App = () => {
         <Header
           selectedModel={selectedModel}
           onOpenModal={() => setModalVisible(true)}
+          onOpenChatHistory={() => setChatHistoryVisible(true)}
+          onNewChat={() => setSidebarVisible(true)}
           theme={theme}
         />
 

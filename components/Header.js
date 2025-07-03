@@ -1,11 +1,20 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button } from 'react-native-paper';
-import { moderateScale, verticalScale } from '../utils/scaling';
+import { Button, IconButton } from 'react-native-paper';
+import { moderateScale, verticalScale, scale } from '../utils/scaling';
 
-const Header = ({ selectedModel, onOpenModal, theme }) => {
+const Header = ({ selectedModel, onOpenModal, onNewChat, theme }) => {
     return (
         <View style={styles.header}>
+            <View style={styles.leftActions}>
+                <IconButton
+                    icon="menu"
+                    size={24}
+                    onPress={onNewChat}
+                    style={styles.iconButton}
+                />
+            </View>
+
             <Button
                 onPress={onOpenModal}
                 icon="robot"
@@ -23,11 +32,24 @@ const styles = StyleSheet.create({
     header: {
         paddingTop: verticalScale(15),
         paddingBottom: verticalScale(10),
+        paddingHorizontal: scale(10),
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         backgroundColor: '#ffffff',
         borderBottomWidth: 1,
         borderBottomColor: '#ddd'
+    },
+    leftActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    rightActions: {
+        width: scale(80), // Để cân bằng với leftActions
+    },
+    iconButton: {
+        margin: 0,
+        marginRight: scale(5),
     },
 });
 
