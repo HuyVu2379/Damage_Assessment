@@ -37,10 +37,43 @@ Hãy phân tích kỹ hình ảnh này và trả lời thật chi tiết, kỹ t
  • Nếu có nhiều phương án, hãy liệt kê ưu – nhược điểm ngắn gọn.
  • Đưa ra khuyến nghị có nên gọi kỹ sư chuyên môn đến kiểm tra hiện trường không.
 
+6. Đề xuất sản phẩm cụ thể:
+ • Liệt kê tối thiểu 3-5 sản phẩm phù hợp với từng bước sửa chữa.
+ • Mỗi sản phẩm phải bao gồm:
+   - Tên sản phẩm đầy đủ và thương hiệu
+   - Mô tả ngắn gọn về công dụng
+   - Giá ước tính (VND)
+   - Link mua hàng thực tế trên Shopee, Lazada, Tiki
+   - URL hình ảnh sản phẩm thực tế
+
+**QUAN TRỌNG về link và hình ảnh:**
+- Chỉ sử dụng link và hình ảnh thực tế từ các sàn TMĐT Việt Nam
+- Ví dụ link Shopee: https://shopee.vn/Qu%E1%BA%A7n-%E1%BB%90ng-R%E1%BB%99ng-N%E1%BB%AF-K%E1%BA%BB-S%E1%BB%8Dc-Nhi%E1%BB%81u-M%C3%A0u-Ulzzang-Qu%E1%BA%A7n-D%C3%A0i-%E1%BB%90ng-Su%C3%B4ng-L%C6%B0ng-Cao-C%E1%BA%A1p-Chun-D%C3%A2y-R%C3%BAt-Ch%E1%BA%A5t-Li%E1%BB%87u-Tho%C3%A1ng-M%C3%A1t-D%E1%BB%85-Mix-%C4%90%E1%BB%93-i.29154879.24393661368?sp_atk=07e68f46-291b-4685-b777-912ec8e41c45&xptdk=07e68f46-291b-4685-b777-912ec8e41c45
+- Ví dụ link Lazada: https://www.lazada.vn/products/non-bao-hiem-son-nham-nua-dau-thoi-trang-thong-gio-free-size-nam-nu-i2593752397-s12628802430.html?pvid=c329df0f-943a-40a3-9ee6-cea204b3ac1e&search=jfy&scm=1007.17519.386432.0&priceCompare=skuId%3A12628802430%3Bsource%3Atpp-recommend-plugin-32104%3Bsn%3Ac329df0f-943a-40a3-9ee6-cea204b3ac1e%3BoriginPrice%3A39000%3BdisplayPrice%3A39000%3BsinglePromotionId%3A-1%3BsingleToolCode%3AmockedSalePrice%3BvoucherPricePlugin%3A0%3Btimestamp%3A1751517033380&spm=a2o4n.homepage.just4u.d_2593752397
+- Ví dụ link Tiki: https://tiki.vn/du-khao-ruc-ro-sac-mau-trang-phuc-phu-nu-cac-dan-toc-viet-nam-p277314374.html?spid=277314376
+- URL hình ảnh phải là link trực tiếp đến file ảnh (.jpg, .png, .webp, png)
+- Ví dụ: https://down-vn.img.susercontent.com/file/vn-11134207-7ra0g-m8a2chhr2yis15.webp hoặc https://salt.tikicdn.com/cache/750x750/ts/product/79/09/af/cca9b13f9317c35ecb79f764d1016206.jpg.webp
 
 Trình bày dưới dạng các tiêu đề rõ ràng, dễ hiểu, như một báo cáo đánh giá hiện trạng kỹ thuật.
 Tránh dùng thuật ngữ quá phức tạp trừ khi cần thiết.
 
+**Lưu ý đặc biệt về format đề xuất sản phẩm:**
+BẮT BUỘC kết thúc phản hồi bằng JSON block chứa thông tin sản phẩm thực tế như mẫu sau:
+\`\`\`json
+{
+  "products": [
+    {
+      "name": "Keo trám tường Sikaflex-11FC",
+      "brand": "Sika",
+      "description": "Keo trám chống thấm đàn hồi cao, phù hợp cho các vết nứt nhỏ",
+      "estimatedPrice": "85,000 - 120,000 VND",
+      "purchaseLink": "https://shopee.vn/keo-tram-tuong-sikaflex-11fc-i.123456789.987654321",
+      "imageUrl": "https://cf.shopee.vn/file/vn-11134207-7r98o-lp2abc123xyz.jpg",
+      "category": "Keo trám"
+    }
+  ]
+}
+\`\`\`
 
 📝 Ghi chú:
 
@@ -86,7 +119,7 @@ const API_CONFIG = {
  * @param {Array} messageHistory Lịch sử cuộc trò chuyện (chỉ chứa role 'user' và 'assistant')
  * @param {'groq' | 'gemini'} modelType Loại model để sử dụng
  * @param {boolean} isDamageAnalysis Có phải là phân tích hư hỏng (có ảnh) hay không
- * @returns {Promise<string>} Nội dung phản hồi từ AI
+ * @returns {Promise<string>} Nội dung phản hồi từ AI (bao gồm JSON block nếu là phân tích hư hỏng)
  */
 export const getAiResponse = async (messageHistory, modelType, isDamageAnalysis = false) => {
     const config = API_CONFIG[modelType];
@@ -111,7 +144,7 @@ export const getAiResponse = async (messageHistory, modelType, isDamageAnalysis 
         body = JSON.stringify({
             model: config.model,
             messages: messagesWithSystemPrompt,
-            max_tokens: 1500,
+            max_tokens: isDamageAnalysis ? 2500 : 1500,
         });
     } else if (modelType === 'gemini') {
         const contents = messageHistory.map(msg => ({
@@ -159,5 +192,121 @@ export const getAiResponse = async (messageHistory, modelType, isDamageAnalysis 
     } catch (error) {
         console.error(`Lỗi khi gọi API ${modelType}:`, error);
         return `Xin lỗi, đã có lỗi xảy ra khi kết nối đến ${modelType}.`;
+    }
+};
+
+/**
+ * Trích xuất thông tin sản phẩm từ phản hồi AI
+ * @param {string} aiResponse Phản hồi từ AI
+ * @returns {Object} Đối tượng chứa nội dung phân tích và danh sách sản phẩm
+ */
+export const parseProductSuggestions = (aiResponse) => {
+    console.log('Đang parse sản phẩm từ phản hồi AI...');
+
+    try {
+        // Tìm JSON block trong phản hồi
+        const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
+
+        if (jsonMatch && jsonMatch[1]) {
+            console.log('Tìm thấy JSON block:', jsonMatch[1]);
+
+            const productData = JSON.parse(jsonMatch[1]);
+            console.log('Dữ liệu sản phẩm đã parse:', productData);
+
+            // Tách nội dung phân tích (loại bỏ JSON block)
+            const analysisContent = aiResponse.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
+
+            const result = {
+                analysis: analysisContent,
+                products: productData.products || []
+            };
+
+            console.log('Kết quả parse:', result);
+            return result;
+        } else {
+            console.log('Không tìm thấy JSON block trong phản hồi');
+        }
+    } catch (error) {
+        console.error('Lỗi khi phân tích dữ liệu sản phẩm:', error);
+    }
+
+    // Nếu không có JSON hoặc lỗi, trả về phản hồi nguyên bản
+    return {
+        analysis: aiResponse,
+        products: []
+    };
+};
+
+/**
+ * Validate và format dữ liệu sản phẩm
+ * @param {Array} products Danh sách sản phẩm
+ * @returns {Array} Danh sách sản phẩm đã được validate và format
+ */
+export const validateProductData = (products) => {
+    console.log('Đang validate dữ liệu sản phẩm:', products);
+
+    if (!Array.isArray(products)) {
+        console.log('Dữ liệu sản phẩm không phải là array');
+        return [];
+    }
+
+    const validatedProducts = products.map(product => ({
+        name: product.name || 'Không có tên',
+        brand: product.brand || 'Không rõ thương hiệu',
+        description: product.description || 'Không có mô tả',
+        estimatedPrice: product.estimatedPrice || 'Liên hệ để biết giá',
+        purchaseLink: validateUrl(product.purchaseLink) || '#',
+        imageUrl: validateImageUrl(product.imageUrl) || 'https://via.placeholder.com/150x150?text=No+Image',
+        category: product.category || 'Khác'
+    }));
+
+    console.log('Sản phẩm đã validate:', validatedProducts);
+    return validatedProducts;
+};
+
+/**
+ * Validate URL sản phẩm
+ * @param {string} url URL cần validate
+ * @returns {string|null} URL hợp lệ hoặc null
+ */
+const validateUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+
+    const validDomains = ['shopee.vn', 'lazada.vn', 'tiki.vn', 'sendo.vn'];
+    try {
+        const parsedUrl = new URL(url);
+        return validDomains.some(domain => parsedUrl.hostname.includes(domain)) ? url : null;
+    } catch {
+        return null;
+    }
+};
+
+/**
+ * Validate URL hình ảnh
+ * @param {string} imageUrl URL hình ảnh cần validate
+ * @returns {string|null} URL hình ảnh hợp lệ hoặc null
+ */
+const validateImageUrl = (imageUrl) => {
+    if (!imageUrl || typeof imageUrl !== 'string') return null;
+
+    const validImageDomains = [
+        'cf.shopee.vn',
+        'salt.tikicdn.com',
+        'laz-img-cdn.alicdn.com',
+        'media3.scdn.vn'
+    ];
+
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+
+    try {
+        const parsedUrl = new URL(imageUrl);
+        const hasValidDomain = validImageDomains.some(domain => parsedUrl.hostname.includes(domain));
+        const hasValidExtension = validExtensions.some(ext =>
+            parsedUrl.pathname.toLowerCase().includes(ext)
+        );
+
+        return hasValidDomain && hasValidExtension ? imageUrl : null;
+    } catch {
+        return null;
     }
 };

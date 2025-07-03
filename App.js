@@ -30,7 +30,7 @@ import { theme } from './utils/theme';
 import { verticalScale, scale } from './utils/scaling';
 
 // API
-import { getAiResponse } from './services/api';
+import { getAiResponse, parseProductSuggestions, validateProductData } from './services/api';
 import { chatStorage } from './services/chatStorage';
 
 const App = () => {
@@ -133,9 +133,37 @@ const App = () => {
 
     // Truyền tham số isDamageAnalysis dựa trên việc có ảnh hay không
     const aiResponseContent = await getAiResponse(apiPayload, selectedModel, hasImage);
-    const aiResponseMessage = { role: 'assistant', content: aiResponseContent };
+
+    // Parse sản phẩm nếu là phân tích hư hỏng
+    let aiResponseMessage;
+    if (hasImage) {
+      console.log('Đang parse phản hồi AI cho phân tích hư hỏng...');
+      const parsedResponse = parseProductSuggestions(aiResponseContent);
+      const validatedProducts = validateProductData(parsedResponse.products);
+
+      console.log('Tạo tin nhắn AI với sản phẩm:', validatedProducts);
+      aiResponseMessage = {
+        role: 'assistant',
+        content: parsedResponse.analysis,
+        products: validatedProducts
+      };
+    } else {
+      aiResponseMessage = { role: 'assistant', content: aiResponseContent };
+    }
+
     setMessages(prev => [...prev, aiResponseMessage]);
     setIsLoading(false);
+  };
+
+  // Test function để kiểm tra hiển thị sản phẩm
+  const testProductDisplay = () => {
+    const testMessage = {
+      role: 'assistant',
+      content: 'Đây là tin nhắn test để hiển thị sản phẩm',
+      products: testProducts
+    };
+
+    setMessages(prev => [...prev, testMessage]);
   };
 
   const renderMessageItem = ({ item }) => (

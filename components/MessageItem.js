@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
+import ProductSuggestions from './ProductSuggestions';
 
 const MessageItem = ({ item }) => {
     if (item.role === 'system') return null;
@@ -23,6 +24,11 @@ const MessageItem = ({ item }) => {
                     <Text style={isUserMessage ? styles.userMessageText : styles.aiMessageText}>
                         {item.content}
                     </Text>
+                )}
+
+                {/* Hiển thị danh sách sản phẩm nếu có */}
+                {!isUserMessage && item.products && item.products.length > 0 && (
+                    <ProductSuggestions products={item.products} />
                 )}
             </View>
         </View>
