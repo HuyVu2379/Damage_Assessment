@@ -21,10 +21,14 @@ const ProductSuggestions = ({ products }) => {
     console.log('Sẽ hiển thị', products.length, 'sản phẩm');
 
     const handleProductPress = (url) => {
-        if (url && url !== '#') {
-            Linking.openURL(url).catch(err =>
-                console.error('Không thể mở link:', err)
-            );
+        try {
+            if (url && url !== '#') {
+                Linking.openURL(url).catch(err =>
+                    console.error('Không thể mở link:', err)
+                );
+            }
+        } catch (error) {
+            console.error('Lỗi khi xử lý link sản phẩm:', error);
         }
     };
 
@@ -35,50 +39,55 @@ const ProductSuggestions = ({ products }) => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
+                nestedScrollEnabled={true}
             >
-                {products.map((product, index) => (
-                    <TouchableOpacity
-                        key={index}
-                        style={styles.productCard}
-                        onPress={() => handleProductPress(product.purchaseLink)}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.imageContainer}>
-                            <Image
-                                source={{ uri: product.imageUrl }}
-                                style={styles.productImage}
-                                resizeMode="contain"
-                                onError={() => {
-                                    console.log('Lỗi tải hình ảnh:', product.imageUrl);
-                                }}
-                            />
-                        </View>
+                {products.map((product, index) => {
+                    if (!product) return null;
 
-                        <View style={styles.productInfo}>
-                            <Text style={styles.productName} numberOfLines={2}>
-                                {product.name}
-                            </Text>
-
-                            <Text style={styles.productBrand} numberOfLines={1}>
-                                {product.brand}
-                            </Text>
-
-                            <Text style={styles.productDescription} numberOfLines={3}>
-                                {product.description}
-                            </Text>
-
-                            <Text style={styles.productPrice}>
-                                {product.estimatedPrice}
-                            </Text>
-
-                            <View style={styles.categoryContainer}>
-                                <Text style={styles.categoryText}>
-                                    {product.category}
-                                </Text>
+                    return (
+                        <TouchableOpacity
+                            key={`product-${index}-${product.name || 'unknown'}`}
+                            style={styles.productCard}
+                            onPress={() => handleProductPress(product.purchaseLink)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.imageContainer}>
+                                <Image
+                                    source={{ uri: product.imageUrl }}
+                                    style={styles.productImage}
+                                    resizeMode="contain"
+                                    onError={() => {
+                                        console.log('Lỗi tải hình ảnh:', product.imageUrl);
+                                    }}
+                                />
                             </View>
-                        </View>
-                    </TouchableOpacity>
-                ))}
+
+                            <View style={styles.productInfo}>
+                                <Text style={styles.productName} numberOfLines={2}>
+                                    {product.name}
+                                </Text>
+
+                                <Text style={styles.productBrand} numberOfLines={1}>
+                                    {product.brand}
+                                </Text>
+
+                                <Text style={styles.productDescription} numberOfLines={3}>
+                                    {product.description}
+                                </Text>
+
+                                <Text style={styles.productPrice}>
+                                    {product.estimatedPrice}
+                                </Text>
+
+                                <View style={styles.categoryContainer}>
+                                    <Text style={styles.categoryText}>
+                                        {product.category}
+                                    </Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    );
+                })}
             </ScrollView>
         </View>
     );
@@ -88,9 +97,9 @@ const styles = StyleSheet.create({
     container: {
         marginTop: verticalScale(10),
         paddingVertical: verticalScale(5),
-        backgroundColor: '#fff',
+        backgroundColor: 'transparent',
         borderRadius: moderateScale(8),
-        marginHorizontal: scale(5),
+        maxWidth: '100%',
     },
     title: {
         fontSize: moderateScale(16),

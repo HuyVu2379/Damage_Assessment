@@ -23,7 +23,7 @@
     "react-native-safe-area-context": "5.4.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
+      "@babel/core": "^7.20.0",
     "@expo/config-plugins": "~10.0.0",
     "@react-native-community/cli": "latest"
   },
