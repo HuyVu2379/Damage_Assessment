@@ -3,36 +3,42 @@
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-const DAMAGE_ANALYSIS_PROMPT = `Tôi sẽ cung cấp hình ảnh một vị trí hư hại trong công trình xây dựng (nhà dân dụng hoặc công trình nhỏ).
+const DAMAGE_ANALYSIS_PROMPT = `Bạn là chuyên gia kỹ thuật xây dựng với kinh nghiệm phong phú, Tôi sẽ cung cấp hình ảnh về tình trạng một công trình xây dựng(nhà dân dụng hoặc công trình nhỏ).
 
+QUAN TRỌNG: Hãy quan sát kỹ hình ảnh trước khi phân tích. Không được đoán mò hay giả định về loại cấu kiện nếu không rõ ràng trong ảnh,nếu nhận ra hoặc phân vân hãy hỏi thêm thông tin về nó hoặc đưa ra
+câu nói cá nhân của bạn,suy nghĩ và suy luận.
 Hãy phân tích kỹ hình ảnh này và trả lời thật chi tiết, kỹ thuật, theo đúng 5 nội dung sau:
 
+1. NHẬN DIỆN KẾT CẤU  VÀ LOẠI HƯ HẠI::
+   • Xác định chính xác cấu kiện trong ảnh: tường (gạch/bê tông,...), trần (thạch cao/bê tông,...), sàn, cột, dầm, mái, cửa sổ, cửa ra vào, hay bộ phận khác.
+   • Mô tả vật liệu cấu kiện: gạch nung, bê tông, thạch cao, gỗ, thép, v.v.
+   • Loại hư hại cụ thể: nứt, thấm nước, bong tróc, mốc, biến dạng, võng, xê dịch, vỡ, sụt lún, ăn mòn,...
+   • Kích thước, hình dạng, hướng phát triển của hư hại
+   • Dấu hiệu hư hại đang tiến triển (nứt tươi, vết nước mới, v.v.)
 
-1. Loại hư hại:
- • Đây là loại hư hại gì (nứt, thấm, bong tróc, mốc, võng trần, vỡ gạch, xê dịch kết cấu,…)?
- • Mô tả hình dạng, kích thước, hướng phát triển của vết nứt/hư hại đó.
- • Có dấu hiệu gì cho thấy hư hại này đang tiếp tục phát triển hay không?
-
-2. Vị trí và loại cấu kiện bị ảnh hưởng:
- • Đây là tường trong, tường ngoài, trần, sàn, móng,…?
- • Có khả năng là tường chịu lực hay không?
- • Có nguy cơ ảnh hưởng kết cấu hay chỉ ảnh hưởng thẩm mỹ?
-
-
-3. Mức độ hư hại:
- • Phân loại mức độ: Nhẹ / Trung bình / Nặng.
- • Nêu rõ lý do tại sao phân loại như vậy.
- • Nếu có nguy cơ mất an toàn công trình, hãy nêu rõ cảnh báo.
+2. VỊ TRÍ VÀ ẢNH HƯỞNG KẾT CẤU:
+ • Vị trí cụ thể: trong nhà/ngoài trời dựa vào ánh sáng của tấm ảnh,dự đoán gần khu vực nào (nhà bếp, phòng tắm, ban công, v.v.)
+   • Phân loại chức năng kêt cấu:
+     - kết cấu chịu lực chính (cột, dầm, tường chịu lực)
+     - kết cấu không chịu lực (tường ngăn, trần treo, hoàn thiện)
+     - kết cấu bảo vệ (mái, tường bao che)
+   • Mức độ ảnh hưởng: an toàn kết cấu / thẩm mỹ / chức năng sử dụng, cảnh bao nếu có nguy cơ mất an toàn.
 
 
-4. Nguyên nhân tiềm ẩn:
+3. ĐÁNH GIÁ MỨC ĐỘ HƯ HẠI:
+ • Phân loại mức độ: Nhẹ / Trung bình / Nặng kèm theo ý kiến riêng ngắn gọn.
+ • Suy nghĩ và Nêu rõ lý do tại sao phân loại như vậy,dẫn chứng bằng các dấu hiệu trong ảnh một cách khoa học và kinh nghiệm.
+ • Thực hiện kết luận dựa trên các tiêu chí kỹ thuật, không chỉ cảm tính.
+
+
+4. PHÂN TÍCH NGUYÊN NHÂN:
  • Dự đoán các nguyên nhân kỹ thuật có thể gây ra tình trạng này.
- • Nếu có thể, phân nhóm nguyên nhân: do thi công – do vật liệu – do môi trường – do nền móng – do tải trọng.
- • Nêu rõ dấu hiệu nào trong ảnh khiến bạn nghi ngờ nguyên nhân đó.
+ • Nếu có thể, phân nhóm nguyên nhân: do thi công – do vật liệu – do môi trường – do nền móng – do tải trọng,v.v.
+ • Nêu rõ dấu hiệu nào trong ảnh khiến bạn nghi ngờ nguyên nhân đó,phân tích kỹ lưỡng theo góc nhìn kỹ thuật và khoa học.
 
 
-5. Hướng dẫn xử lý và sửa chữa:
- • Mô tả từng bước xử lý chi tiết, theo trình tự thực tế ngoài công trình.
+5. Hướng dẫn kết luận vấn đề ,xử lý và sửa chữa:
+ • Mô tả từng bước xử lý chi tiết chuẩn chỉ kĩ thuật, theo trình tự thực tế ngoài công trình,
  • Gợi ý vật liệu và phương pháp phù hợp: keo trám, vữa, sơn chống thấm, epoxy,…
  • Nếu có nhiều phương án, hãy liệt kê ưu – nhược điểm ngắn gọn.
  • Đưa ra khuyến nghị có nên gọi kỹ sư chuyên môn đến kiểm tra hiện trường không.
@@ -42,13 +48,17 @@ Trình bày dưới dạng các tiêu đề rõ ràng, dễ hiểu, như một b
 Tránh dùng thuật ngữ quá phức tạp trừ khi cần thiết.
 
 
-📝 Ghi chú:
-
 Bạn có thể thêm phần mở đầu như sau nếu cần cụ thể hóa thêm bối cảnh:
 
  • Đây là công trình nhà ở dân dụng, tuổi đời 10 năm, nền đất yếu.
  • Vết nứt nằm gần nhà tắm hoặc cửa sổ, có dấu hiệu bị ẩm kéo dài.
- • Tôi nghi ngờ có lún nền hoặc thấm nước từ phòng tắm.`;
+ • Tôi nghi ngờ có lún nền hoặc thấm nước từ phòng tắm.
+
+ LƯU Ý QUAN TRỌNG:
+- Nếu không thể xác định rõ loại cấu kiện từ ảnh, hãy nêu rõ "cần thêm thông tin" thay vì đoán
+- Ưu tiên an toàn: luôn cảnh báo nếu có nghi ngờ về nguy cơ an toàn
+- Sử dụng thuật ngữ phù hợp với trình độ người dùng phổ thông
+- Đưa ra nhiều phương án xử lý khi có thể, từ đơn giản đến phức tạp`;
 
 
 
