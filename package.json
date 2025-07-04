@@ -1,0 +1,34 @@
+{
+  "license": "0BSD",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "expo": "~53.0.17",
+    "expo-status-bar": "~2.2.3",
+    "react": "19.0.0",
+    "react-native": "0.79.5",
+    "expo-av": "~15.1.7",
+    "expo-camera": "~16.1.10",
+    "expo-speech": "~13.1.7",
+    "expo-dev-client": "~5.2.3",
+    "expo-file-system": "~18.1.11",
+    "expo-image-picker": "~16.1.4",
+    "@expo/vector-icons": "^14.1.0",
+    "react-native-paper": "^5.14.5",
+    "@expo/metro-runtime": "~5.0.4",
+    "@react-native-voice/voice": "3.1.5",
+    "@react-native-community/hooks": "^100.1.0",
+    "react-native-safe-area-context": "5.4.0",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "react-native-vector-icons": "10.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0"
+  },
+  "private": true
+}

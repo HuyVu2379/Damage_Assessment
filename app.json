@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "bdam",
+    "slug": "snack-ef3a89c6-b5a7-4b50-9076-0fff2bda581b",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "bdam",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Ứng dụng cần quyền microphone để thu âm tin nhắn"
+      }
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.huyvu2379.snackef3a89c6b5a74b5090760fff2bda581b"
+    },
+    "plugins": [
+      "expo-dev-client"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "22faa20e-0caa-4c15-b9b6-b1b198124380"
+      }
+    }
+  }
+}
