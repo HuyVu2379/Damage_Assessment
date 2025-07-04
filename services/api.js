@@ -61,8 +61,6 @@ Bạn có thể thêm phần mở đầu như sau nếu cần cụ thể hóa th
 - Đưa ra nhiều phương án xử lý khi có thể, từ đơn giản đến phức tạp`;
 
 
-
-
 const GENERAL_CHAT_PROMPT = `Bạn là trợ lý AI thông minh và hữu ích chuyên về xây dựng và bảo trì công trình.
 
 **Quy tắc quan trọng: Toàn bộ phản hồi của bạn PHẢI bằng tiếng Việt.**
