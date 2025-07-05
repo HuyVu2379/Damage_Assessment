@@ -24,7 +24,7 @@ const MessageItem = ({ item }) => {
                 {item.imageUri && (
                     <Image source={{ uri: item.imageUri }} style={styles.messageImage} />
                 )}
-                {item.content.length > 0 && (
+                {item.content && item.content.length > 0 && (
                     <Text style={isUserMessage ? styles.userMessageText : styles.aiMessageText}>
                         {item.content}
                     </Text>

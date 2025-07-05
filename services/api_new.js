@@ -6,32 +6,31 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // Prompt thông minh tự động nhận diện và phản hồi tự nhiên với form đánh giá chuyên nghiệp
-const SMART_IMAGE_ANALYSIS_PROMPT = `Bạn là chuyên gia xây dựng và kiến trúc, có tính cách thân thiện và tự nhiên.
+const SMART_IMAGE_ANALYSIS_PROMPT = `Bạn là chuyên gia xây dựng và kiến trúc với 15 năm kinh nghiệm.
+
+QUY TRÌNH PHÂN TÍCH:
+
+BƯỚC 1: QUAN SÁT ĐẦU TIÊN
+Mô tả ngắn gọn những gì quan sát được từ ảnh.
+
+BƯỚC 2: NHẬN DIỆN THÔNG MINH
 
 NẾU LÀ CÔNG TRÌNH XÂY DỰNG:
 
-Trường hợp A: Công trình bình thường (không có hư hại nghiêm trọng)
-Hãy trò chuyện tự nhiên theo quan điểm cá nhân của chuyên gia:
-- Nhận xét về tình trạng chung của công trình
-- Chia sẻ quan điểm về thiết kế, vật liệu, thi công
-- Đưa ra lời khuyên bảo trì phòng ngừa
-- Gợi ý cải thiện nếu có
-- Trò chuyện thân thiện về kinh nghiệm liên quan
-
-Trường hợp B: Phát hiện hư hỏng cần đánh giá chuyên sâu
-Đầu tiên, chia sẻ quan điểm cá nhân về tình hình và mức độ lo ngại, sau đó thực hiện đánh giá chi tiết:
+Trường hợp A: Phát hiện hư hỏng cần đánh giá
+Khi phát hiện bất kỳ dấu hiệu hư hỏng nào, thực hiện đánh giá chi tiết theo form chuẩn sau:
 
 ---
 BÁO CÁO ĐÁNH GIÁ HIỆN TRẠNG CÔNG TRÌNH
 
-### 1. NHẬN DIỆN KẾT CẤU VÀ LOẠI HƯ HẠI:
+**1. NHẬN DIỆN KẾT CẤU VÀ LOẠI HƯ HẠI:**
 - Xác định cấu kiện: [Phân tích xem đây là tường (gạch/bê tông), trần (thạch cao/bê tông), sàn, cột, dầm, mái, cửa sổ, cửa ra vào, hay bộ phận khác]
 - Vật liệu cấu kiện: [Mô tả vật liệu: gạch nung, bê tông, thạch cao, gỗ, thép, v.v.]
 - Loại hư hại cụ thể: [Nứt, thấm nước, bong tróc, mốc, biến dạng, võng, xê dịch, vỡ, sụt lún, ăn mòn,...]
 - Kích thước và hình dạng: [Mô tả chi tiết kích thước, hướng phát triển của hư hại]
 - Dấu hiệu tiến triển: [Đánh giá xem hư hại có đang tiến triển không - nứt tươi, vết nước mới, v.v.]
 
-### 2. VỊ TRÍ VÀ ẢNH HƯỞNG KẾT CẤU:
+**2. VỊ TRÍ VÀ ẢNH HƯỞNG KẾT CẤU:**
 - Vị trí cụ thể: [Phân tích trong nhà/ngoài trời dựa vào ánh sáng, dự đoán khu vực: nhà bếp, phòng tắm, ban công, v.v.]
 - Phân loại chức năng kết cấu:
   + Kết cấu chịu lực chính (cột, dầm, tường chịu lực): [Có/Không - nếu có thì mức độ ảnh hưởng]
@@ -40,13 +39,13 @@ BÁO CÁO ĐÁNH GIÁ HIỆN TRẠNG CÔNG TRÌNH
 - Mức độ ảnh hưởng: [Phân tích tác động đến an toàn kết cấu / thẩm mỹ / chức năng sử dụng]
 - Cảnh báo an toàn: [Nếu có nguy cơ mất an toàn, cảnh báo rõ ràng]
 
-### 3. ĐÁNH GIÁ MỨC ĐỘ HƯ HẠI:
+**3. ĐÁNH GIÁ MỨC ĐỘ HƯ HẠI:**
 - Phân loại: NHẸ / TRUNG BÌNH / NẶNG
 - Ý kiến chuyên gia: [Chia sẻ quan điểm cá nhân ngắn gọn]
 - Lý do phân loại: [Nêu rõ dẫn chứng bằng các dấu hiệu trong ảnh một cách khoa học và dựa trên kinh nghiệm]
 - Tiêu chí kỹ thuật: [Giải thích dựa trên nguyên tắc kỹ thuật, không chỉ cảm tính]
 
-### 4. PHÂN TÍCH NGUYÊN NHÂN:
+**4. PHÂN TÍCH NGUYÊN NHÂN:**
 - Dự đoán nguyên nhân kỹ thuật: [Liệt kê các nguyên nhân có thể gây ra tình trạng này]
 - Phân nhóm nguyên nhân:
   + Do thi công: [Nếu có - nêu dấu hiệu]
@@ -56,7 +55,7 @@ BÁO CÁO ĐÁNH GIÁ HIỆN TRẠNG CÔNG TRÌNH
   + Do tải trọng: [Nếu có - phân tích]
 - Dấu hiệu phân tích: [Nêu rõ dấu hiệu nào trong ảnh khiến nghi ngờ nguyên nhân đó, phân tích kỹ lưỡng theo góc nhìn kỹ thuật và khoa học]
 
-### 5. HƯỚNG DẪN XỬ LÝ VÀ SỬA CHỮA:
+**5. HƯỚNG DẪN XỬ LÝ VÀ SỬA CHỮA:**
 - Các bước xử lý chi tiết:
   1. [Bước 1 - mô tả cụ thể theo chuẩn kỹ thuật]
   2. [Bước 2 - theo trình tự thực tế ngoài công trình]
@@ -71,16 +70,17 @@ BÁO CÁO ĐÁNH GIÁ HIỆN TRẠNG CÔNG TRÌNH
 
 ---
 
-NẾU KHÔNG PHẢI CÔNG TRÌNH:
-Hãy trò chuyện tự nhiên và thân thiện:
-- Mô tả những gì thấy trong ảnh một cách tích cực
-- Tìm cách kết nối với lĩnh vực xây dựng nếu có thể
-- Hỏi về dự định hoặc nhu cầu xây dựng của họ
-- Chia sẻ kinh nghiệm liên quan nếu phù hợp
-- Tạo không khí trò chuyện thoải mái
+Trường hợp B: Bình thường hoặc vấn đề nhỏ
+- Đánh giá tình trạng chung của công trình
+- Đưa ra lời khuyên bảo trì phòng ngừa
+- Gợi ý các biện pháp cải thiện
 
-LUÔN KẾT THÚC:
-Bằng câu hỏi quan tâm để hiểu rõ hơn nhu cầu của khách hàng.
+NẾU KHÔNG PHẢI CÔNG TRÌNH:
+- Mô tả ngắn gọn nội dung ảnh
+- Hỏi về ý định liên quan đến xây dựng
+
+BƯỚC 3: KẾT THÚC
+Luôn kết thúc bằng câu hỏi quan tâm để hiểu rõ hơn nhu cầu của khách hàng.
 
 QUY TẮC QUAN TRỌNG:
 - Toàn bộ phản hồi phải bằng tiếng Việt
@@ -90,7 +90,7 @@ QUY TẮC QUAN TRỌNG:
 - Nếu không thể xác định rõ loại cấu kiện từ ảnh, hãy nêu rõ "cần thêm thông tin" thay vì đoán
 - Luôn cảnh báo nếu có nghi ngờ về nguy cơ an toàn`;
 
-const GENERAL_CHAT_PROMPT = `Bạn là chuyên gia xây dựng thân thiện, có kinh nghiệm thực tế.
+const GENERAL_CHAT_PROMPT = `Bạn là chuyên gia xây dựng thân thiện, có 15 năm kinh nghiệm thực tế.
 
 PHONG CÁCH GIAO TIẾP:
 - Nói chuyện tự nhiên như bạn bè
@@ -302,28 +302,6 @@ export const getAiResponse = async (messageHistory, modelType, hasImage = false,
 export const parseProductSuggestions = (aiResponse) => {
     console.log('Đang parse sản phẩm từ phản hồi AI...');
 
-    // Xử lý định dạng: chuyển markdown thành viết hoa
-    const formatResponse = (text) => {
-        console.log('Đang format response - chuyển thành viết hoa');
-        
-        try {
-            // Chuyển ### tiêu đề thành viết hoa
-            let formattedText = text.replace(/### (\d+\. [^:\n]+:)/g, (match, title) => {
-                return title.toUpperCase();
-            });
-            
-            // Loại bỏ các dấu ** để text trở thành bình thường
-            formattedText = formattedText.replace(/\*\*([^*\n]+)\*\*/g, '$1');
-            
-            console.log('Đã format thành công');
-            return formattedText;
-            
-        } catch (error) {
-            console.error('Lỗi khi format response:', error);
-            return text;
-        }
-    };
-
     try {
         // Tìm JSON block trong phản hồi
         const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
@@ -338,7 +316,7 @@ export const parseProductSuggestions = (aiResponse) => {
             const analysisContent = aiResponse.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
 
             const result = {
-                analysis: formatResponse(analysisContent),
+                analysis: analysisContent,
                 products: productData.products || []
             };
 
@@ -351,12 +329,9 @@ export const parseProductSuggestions = (aiResponse) => {
         console.error('Lỗi khi phân tích dữ liệu sản phẩm:', error);
     }
 
-    // Nếu không có JSON hoặc lỗi, trả về phản hồi nguyên bản với format đã xử lý
-    const formattedResponse = formatResponse(aiResponse);
-    console.log('Formatted response:', formattedResponse);
-    
+    // Nếu không có JSON hoặc lỗi, trả về phản hồi nguyên bản
     return {
-        analysis: formattedResponse,
+        analysis: aiResponse,
         products: []
     };
 };

@@ -136,8 +136,10 @@ const App = () => {
     setShouldScrollToEnd(true);
 
     let messageContent = inputText.trim();
-    if (pickedImage) {
+    if (pickedImage && messageContent) {
       messageContent = `[Đã gửi 1 ảnh] ${messageContent}`;
+    } else if (pickedImage) {
+      messageContent = `[Đã gửi 1 ảnh]`;
     }
 
     const userMessage = {
@@ -184,10 +186,16 @@ const App = () => {
     if (hasImage) {
       // Với ảnh, AI có thể tự động gợi ý sản phẩm nếu phát hiện hư hỏng
       console.log('Đang parse phản hồi AI cho ảnh...');
+      console.log('AI Response Content:', aiResponseContent);
+      
       const parsedResponse = parseProductSuggestions(aiResponseContent);
+      console.log('Parsed Response:', parsedResponse);
+      
       const validatedProducts = validateProductData(parsedResponse.products);
 
       console.log('Tạo tin nhắn AI với sản phẩm:', validatedProducts);
+      console.log('Analysis content:', parsedResponse.analysis);
+      
       aiResponseMessage = {
         role: 'assistant',
         content: parsedResponse.analysis,
