@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button, IconButton } from 'react-native-paper';
+import { IconButton } from 'react-native-paper';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 
-const Header = ({ selectedModel, onOpenModal, onNewChat, theme }) => {
+const Header = ({ onNewChat, isDamageMode, onToggleDamageMode, theme }) => {
     return (
         <View style={styles.header}>
             <View style={styles.leftActions}>
@@ -15,15 +15,22 @@ const Header = ({ selectedModel, onOpenModal, onNewChat, theme }) => {
                 />
             </View>
 
-            <Button
-                onPress={onOpenModal}
-                icon="robot"
-                mode="contained"
-                color={theme.colors.primary}
-                labelStyle={{ fontSize: moderateScale(12) }}
-            >
-                Model: {selectedModel}
-            </Button>
+            <View style={styles.centerActions}>
+                {/* Khu vực giữa để trống hoặc có thể thêm title */}
+            </View>
+
+            <View style={styles.rightActions}>
+                <IconButton
+                    icon={isDamageMode ? "hammer-wrench" : "chat"}
+                    size={20}
+                    onPress={onToggleDamageMode}
+                    style={[
+                        styles.toggleButton,
+                        isDamageMode && styles.toggleButtonActive
+                    ]}
+                    iconColor={isDamageMode ? '#fff' : theme.colors.primary}
+                />
+            </View>
         </View>
     );
 };
@@ -43,9 +50,26 @@ const styles = StyleSheet.create({
     leftActions: {
         flexDirection: 'row',
         alignItems: 'center',
+        width: scale(60),
+    },
+    centerActions: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     rightActions: {
-        width: scale(80), // Để cân bằng với leftActions
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: scale(60),
+        justifyContent: 'flex-end',
+    },
+    toggleButton: {
+        margin: 0,
+        borderRadius: moderateScale(20),
+        backgroundColor: 'transparent',
+    },
+    toggleButtonActive: {
+        backgroundColor: '#FF6B35',
     },
     iconButton: {
         margin: 0,

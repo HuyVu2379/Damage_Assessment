@@ -1,97 +1,54 @@
+import * as FileSystem from 'expo-file-system';
+
 // --- API Keys (Sử dụng biến môi trường) ---
 // API keys được lưu trữ trong file .env (không được commit lên git)
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-const DAMAGE_ANALYSIS_PROMPT = `Bạn là chuyên gia kỹ thuật xây dựng với kinh nghiệm phong phú, Tôi sẽ cung cấp hình ảnh về tình trạng một công trình xây dựng(nhà dân dụng hoặc công trình nhỏ).
+// Prompt cho phân tích ảnh tổng quát
+const IMAGE_ANALYSIS_PROMPT = `Ảnh này có gì? Trả lời bằng cách liệt kê tên từng vật thể nhìn thấy kèm vị trí (trái, phải, giữa,...). Đừng phỏng đoán nếu không chắc chắn.`;
 
-QUAN TRỌNG: Hãy quan sát kỹ hình ảnh trước khi phân tích. Không được đoán mò hay giả định về loại cấu kiện nếu không rõ ràng trong ảnh,nếu nhận ra hoặc phân vân hãy hỏi thêm thông tin về nó hoặc đưa ra
-câu nói cá nhân của bạn,suy nghĩ và suy luận.
-Hãy phân tích kỹ hình ảnh này và trả lời thật chi tiết, kỹ thuật, theo đúng 5 nội dung sau:
+const DAMAGE_ANALYSIS_PROMPT = `BẠN LÀ CHUYÊN GIA KIỂM ĐỊNH CÔNG TRÌNH XÂY DỰNG.
 
-1. NHẬN DIỆN KẾT CẤU  VÀ LOẠI HƯ HẠI::
-   • Xác định chính xác cấu kiện trong ảnh: tường (gạch/bê tông,...), trần (thạch cao/bê tông,...), sàn, cột, dầm, mái, cửa sổ, cửa ra vào, hay bộ phận khác.
-   • Mô tả vật liệu cấu kiện: gạch nung, bê tông, thạch cao, gỗ, thép, v.v.
-   • Loại hư hại cụ thể: nứt, thấm nước, bong tróc, mốc, biến dạng, võng, xê dịch, vỡ, sụt lún, ăn mòn,...
-   • Kích thước, hình dạng, hướng phát triển của hư hại
-   • Dấu hiệu hư hại đang tiến triển (nứt tươi, vết nước mới, v.v.)
+NHIỆM VỤ: Phân tích tình trạng các cấu kiện xây dựng trong ảnh.
 
-2. VỊ TRÍ VÀ ẢNH HƯỞNG KẾT CẤU:
- • Vị trí cụ thể: trong nhà/ngoài trời dựa vào ánh sáng của tấm ảnh,dự đoán gần khu vực nào (nhà bếp, phòng tắm, ban công, v.v.)
-   • Phân loại chức năng kêt cấu:
-     - kết cấu chịu lực chính (cột, dầm, tường chịu lực)
-     - kết cấu không chịu lực (tường ngăn, trần treo, hoàn thiện)
-     - kết cấu bảo vệ (mái, tường bao che)
-   • Mức độ ảnh hưởng: an toàn kết cấu / thẩm mỹ / chức năng sử dụng, cảnh bao nếu có nguy cơ mất an toàn.
+BƯỚC 1: NHẬN DIỆN CẤU KIỆN
+Xác định các cấu kiện xây dựng có trong ảnh:
+- Tường (gạch, bê tông, thạch cao)
+- Trần nhà (bê tông, thạch cao, tấm lợp)
+- Sàn (gạch men, bê tông, gỗ)
+- Cột, dầm (bê tông cốt thép, thép)
+- Mái, khung kết cấu
 
+BƯỚC 2: ĐÁNH GIÁ TÌNH TRẠNG
+Cho mỗi cấu kiện, phân loại:
 
-3. ĐÁNH GIÁ MỨC ĐỘ HƯ HẠI:
- • Phân loại mức độ: Nhẹ / Trung bình / Nặng kèm theo ý kiến riêng ngắn gọn.
- • Suy nghĩ và Nêu rõ lý do tại sao phân loại như vậy,dẫn chứng bằng các dấu hiệu trong ảnh một cách khoa học và kinh nghiệm.
- • Thực hiện kết luận dựa trên các tiêu chí kỹ thuật, không chỉ cảm tính.
+✅ **BÌNH THƯỜNG**: Không có dấu hiệu hư hỏng
+- Bề mặt phẳng, không nứt
+- Màu sắc đồng đều
+- Không có vết ẩm mốc
 
+⚠️ **HƯ HỎNG NHẸ**: 
+- Nứt nhỏ (< 2mm)
+- Bong tróc sơn nhẹ
+- Ẩm mốc cục bộ
+- Phai màu
 
-4. PHÂN TÍCH NGUYÊN NHÂN:
- • Dự đoán các nguyên nhân kỹ thuật có thể gây ra tình trạng này.
- • Nếu có thể, phân nhóm nguyên nhân: do thi công – do vật liệu – do môi trường – do nền móng – do tải trọng,v.v.
- • Nêu rõ dấu hiệu nào trong ảnh khiến bạn nghi ngờ nguyên nhân đó,phân tích kỹ lưỡng theo góc nhìn kỹ thuật và khoa học.
+🚨 **HƯ HỎNG NẶNG**:
+- Nứt lớn (> 2mm)
+- Bong tróc vữa/bê tông
+- Thấm nước rõ rệt
+- Cong vênh, sụt lún
 
+BƯỚC 3: TRẢ LỜI
+Format: 
+**[Tên cấu kiện]**: [Tình trạng] - [Mô tả chi tiết]
 
-5. Hướng dẫn kết luận vấn đề ,xử lý và sửa chữa:
- • Mô tả từng bước xử lý chi tiết chuẩn chỉ kĩ thuật, theo trình tự thực tế ngoài công trình,
- • Gợi ý vật liệu và phương pháp phù hợp: keo trám, vữa, sơn chống thấm, epoxy,…
- • Nếu có nhiều phương án, hãy liệt kê ưu – nhược điểm ngắn gọn.
- • Đưa ra khuyến nghị có nên gọi kỹ sư chuyên môn đến kiểm tra hiện trường không.
+VÍ DỤ:
+**Tường gạch**: ✅ BÌNH THƯỜNG - Tường có màu trắng đồng đều, bề mặt phẳng, không có vết nứt hay ẩm mốc.
+**Trần bê tông**: ⚠️ HƯ HỎNG NHẸ - Có một số vết nứt nhỏ dài khoảng 30cm, cần theo dõi.
 
-6. Đề xuất sản phẩm cụ thể:
- • Liệt kê tối thiểu 3-5 sản phẩm phù hợp với từng bước sửa chữa.
- • Mỗi sản phẩm phải bao gồm:
-   - Tên sản phẩm đầy đủ và thương hiệu
-   - Mô tả ngắn gọn về công dụng
-   - Giá ước tính (VND)
-   - Link mua hàng thực tế trên Shopee, Lazada, Tiki
-   - URL hình ảnh sản phẩm thực tế
-
-**QUAN TRỌNG về link và hình ảnh:**
-- Chỉ sử dụng link và hình ảnh thực tế từ các sàn TMĐT Việt Nam
-- Ví dụ link Shopee: https://shopee.vn/Qu%E1%BA%A7n-%E1%BB%90ng-R%E1%BB%99ng-N%E1%BB%AF-K%E1%BA%BB-S%E1%BB%8Dc-Nhi%E1%BB%81u-M%C3%A0u-Ulzzang-Qu%E1%BA%A7n-D%C3%A0i-%E1%BB%90ng-Su%C3%B4ng-L%C6%B0ng-Cao-C%E1%BA%A1p-Chun-D%C3%A2y-R%C3%BAt-Ch%E1%BA%A5t-Li%E1%BB%87u-Tho%C3%A1ng-M%C3%A1t-D%E1%BB%85-Mix-%C4%90%E1%BB%93-i.29154879.24393661368?sp_atk=07e68f46-291b-4685-b777-912ec8e41c45&xptdk=07e68f46-291b-4685-b777-912ec8e41c45
-- Ví dụ link Lazada: https://www.lazada.vn/products/non-bao-hiem-son-nham-nua-dau-thoi-trang-thong-gio-free-size-nam-nu-i2593752397-s12628802430.html?pvid=c329df0f-943a-40a3-9ee6-cea204b3ac1e&search=jfy&scm=1007.17519.386432.0&priceCompare=skuId%3A12628802430%3Bsource%3Atpp-recommend-plugin-32104%3Bsn%3Ac329df0f-943a-40a3-9ee6-cea204b3ac1e%3BoriginPrice%3A39000%3BdisplayPrice%3A39000%3BsinglePromotionId%3A-1%3BsingleToolCode%3AmockedSalePrice%3BvoucherPricePlugin%3A0%3Btimestamp%3A1751517033380&spm=a2o4n.homepage.just4u.d_2593752397
-- Ví dụ link Tiki: https://tiki.vn/du-khao-ruc-ro-sac-mau-trang-phuc-phu-nu-cac-dan-toc-viet-nam-p277314374.html?spid=277314376
-- URL hình ảnh phải là link trực tiếp đến file ảnh (.jpg, .png, .webp, png)
-- Ví dụ: https://down-vn.img.susercontent.com/file/vn-11134207-7ra0g-m8a2chhr2yis15.webp hoặc https://salt.tikicdn.com/cache/750x750/ts/product/79/09/af/cca9b13f9317c35ecb79f764d1016206.jpg.webp
-
-Trình bày dưới dạng các tiêu đề rõ ràng, dễ hiểu, như một báo cáo đánh giá hiện trạng kỹ thuật.
-Tránh dùng thuật ngữ quá phức tạp trừ khi cần thiết.
-
-**Lưu ý đặc biệt về format đề xuất sản phẩm:**
-BẮT BUỘC kết thúc phản hồi bằng JSON block chứa thông tin sản phẩm thực tế như mẫu sau:
-\`\`\`json
-{
-  "products": [
-    {
-      "name": "Keo trám tường Sikaflex-11FC",
-      "brand": "Sika",
-      "description": "Keo trám chống thấm đàn hồi cao, phù hợp cho các vết nứt nhỏ",
-      "estimatedPrice": "85,000 - 120,000 VND",
-      "purchaseLink": "https://shopee.vn/keo-tram-tuong-sikaflex-11fc-i.123456789.987654321",
-      "imageUrl": "https://cf.shopee.vn/file/vn-11134207-7r98o-lp2abc123xyz.jpg",
-      "category": "Keo trám"
-    }
-  ]
-}
-\`\`\`
-
-Bạn có thể thêm phần mở đầu như sau nếu cần cụ thể hóa thêm bối cảnh:
-
- • Đây là công trình nhà ở dân dụng, tuổi đời 10 năm, nền đất yếu.
- • Vết nứt nằm gần nhà tắm hoặc cửa sổ, có dấu hiệu bị ẩm kéo dài.
- • Tôi nghi ngờ có lún nền hoặc thấm nước từ phòng tắm.
-
- LƯU Ý QUAN TRỌNG:
-- Nếu không thể xác định rõ loại cấu kiện từ ảnh, hãy nêu rõ "cần thêm thông tin" thay vì đoán
-- Ưu tiên an toàn: luôn cảnh báo nếu có nghi ngờ về nguy cơ an toàn
-- Sử dụng thuật ngữ phù hợp với trình độ người dùng phổ thông
-- Đưa ra nhiều phương án xử lý khi có thể, từ đơn giản đến phức tạp`;
+QUAN TRỌNG: Hãy phân tích thật kỹ và trung thực về tình trạng thực tế của từng cấu kiện.`;
 
 
 const GENERAL_CHAT_PROMPT = `Bạn là trợ lý AI thông minh và hữu ích chuyên về xây dựng và bảo trì công trình.
@@ -119,20 +76,115 @@ const API_CONFIG = {
     gemini: {
         endpoint: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         apiKey: GEMINI_API_KEY,
+    },
+    'gemini-vision': {
+        endpoint: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        apiKey: GEMINI_API_KEY,
+    }
+};
+
+/**
+ * Phân tích ảnh với Gemini Pro Vision
+ * @param {string} imageBase64 Ảnh đã được encode thành Base64
+ * @param {string} prompt Prompt để phân tích ảnh (mặc định là phân tích tổng quát)
+ * @returns {Promise<string>} Kết quả phân tích ảnh
+ */
+export const analyzeImageWithGemini = async (imageBase64, prompt = IMAGE_ANALYSIS_PROMPT) => {
+    const config = API_CONFIG['gemini-vision'];
+    
+    try {
+        // Loại bỏ data URL prefix nếu có
+        const base64Data = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+        
+        const body = JSON.stringify({
+            contents: [
+                {
+                    parts: [
+                        {
+                            text: prompt
+                        },
+                        {
+                            inline_data: {
+                                mime_type: "image/jpeg",
+                                data: base64Data
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        console.log('Đang gửi ảnh đến Gemini Pro Vision...');
+        
+        const response = await fetch(config.endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: body
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Chi tiết lỗi Gemini Vision:', errorData);
+            throw new Error(`Lỗi API Gemini Vision: ${errorData.error?.message || 'Unknown error'}`);
+        }
+
+        const data = await response.json();
+        console.log('Response từ Gemini Vision:', data);
+        
+        const aiMessage = data.candidates[0]?.content?.parts[0]?.text?.trim();
+
+        if (!aiMessage) {
+            throw new Error("Không nhận được nội dung hợp lệ từ Gemini Vision.");
+        }
+
+        console.log('Phân tích ảnh thành công:', aiMessage);
+        return aiMessage;
+
+    } catch (error) {
+        console.error('Lỗi khi phân tích ảnh với Gemini Vision:', error);
+        return `Xin lỗi, đã có lỗi xảy ra khi phân tích ảnh: ${error.message}`;
+    }
+};
+
+/**
+ * Chuyển đổi ảnh sang Base64
+ * @param {string} uri URI của ảnh
+ * @returns {Promise<string>} Ảnh đã được encode thành Base64
+ */
+export const convertImageToBase64 = async (uri) => {
+    try {
+        console.log('Đang chuyển đổi ảnh sang Base64:', uri);
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
+        });
+        console.log('Chuyển đổi Base64 thành công');
+        return base64;
+    } catch (error) {
+        console.error('Lỗi khi chuyển đổi ảnh sang Base64:', error);
+        throw error;
     }
 };
 
 /**
  * Lấy phản hồi từ model AI được chọn
  * @param {Array} messageHistory Lịch sử cuộc trò chuyện (chỉ chứa role 'user' và 'assistant')
- * @param {'groq' | 'gemini'} modelType Loại model để sử dụng
+ * @param {'groq' | 'gemini' | 'gemini-vision'} modelType Loại model để sử dụng
  * @param {boolean} isDamageAnalysis Có phải là phân tích hư hỏng (có ảnh) hay không
+ * @param {string} imageBase64 Ảnh Base64 (chỉ dành cho gemini-vision)
  * @returns {Promise<string>} Nội dung phản hồi từ AI (bao gồm JSON block nếu là phân tích hư hỏng)
  */
-export const getAiResponse = async (messageHistory, modelType, isDamageAnalysis = false) => {
+export const getAiResponse = async (messageHistory, modelType, isDamageAnalysis = false, imageBase64 = null) => {
     const config = API_CONFIG[modelType];
     if (!config) {
         return "Lỗi: Model không được hỗ trợ.";
+    }
+
+    // Nếu là gemini-vision và có ảnh, sử dụng function riêng
+    if (modelType === 'gemini-vision' && imageBase64) {
+        const prompt = isDamageAnalysis ? DAMAGE_ANALYSIS_PROMPT : IMAGE_ANALYSIS_PROMPT;
+        return await analyzeImageWithGemini(imageBase64, prompt);
     }
 
     // Chọn prompt phù hợp dựa trên loại tin nhắn

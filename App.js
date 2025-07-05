@@ -37,16 +37,17 @@ import { chatStorage } from './services/chatStorage';
 
 const App = () => {
   const [messages, setMessages] = useState([
-    { role: 'system', content: 'Chào bạn, hãy chọn model và bắt đầu!' },
+    { role: 'system', content: 'Chào bạn! Bạn có thể chat thường hoặc bật chế độ phân tích hư hỏng công trình.' },
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('groq');
+  const [selectedModel, setSelectedModel] = useState('gemini'); // Mặc định là gemini
   const [pickedImage, setPickedImage] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [chatHistoryVisible, setChatHistoryVisible] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [shouldScrollToEnd, setShouldScrollToEnd] = useState(true);
+  const [isDamageMode, setIsDamageMode] = useState(false); // State cho chế độ phân tích hư hỏng
 
   const flatListRef = useRef(null);
   const previousMessagesLength = useRef(messages.length);
@@ -103,9 +104,10 @@ const App = () => {
 
   // Bắt đầu cuộc trò chuyện mới
   const startNewChat = () => {
-    setMessages([{ role: 'system', content: 'Chào bạn, hãy chọn model và bắt đầu!' }]);
+    setMessages([{ role: 'system', content: 'Chào bạn! Bạn có thể chat thường hoặc bật chế độ phân tích hư hỏng công trình.' }]);
     setInputText('');
     setPickedImage(null);
+    setIsDamageMode(false); // Reset về chế độ chat thường
     setShouldScrollToEnd(true);
   };
 
@@ -125,6 +127,22 @@ const App = () => {
   const selectModel = (model) => {
     setSelectedModel(model);
     setModalVisible(false);
+  };
+
+  // Handler cho toggle damage mode
+  const toggleDamageMode = () => {
+    const newMode = !isDamageMode;
+    setIsDamageMode(newMode);
+    
+    // Thêm thông báo ngắn gọn về chế độ hiện tại
+    const modeMessage = newMode 
+      ? "🔧 Chế độ phân tích hư hỏng: Gửi ảnh công trình để đánh giá tình trạng"
+      : "💬 Chế độ chat thường: Trao đổi về xây dựng và kiến trúc";
+    
+    setMessages(prev => [...prev, { 
+      role: 'system', 
+      content: modeMessage 
+    }]);
   };
 
   const handleSendMessage = async () => {
@@ -148,23 +166,40 @@ const App = () => {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
 
-    // Lưu trạng thái có ảnh để quyết định loại prompt
+    // Lưu trạng thái có ảnh và chế độ phân tích
     const hasImage = !!pickedImage;
+    const shouldUseDamageAnalysis = isDamageMode && hasImage; // Chỉ phân tích hư hỏng khi bật chế độ VÀ có ảnh
 
     setInputText('');
     setPickedImage(null);
     setIsLoading(true);
 
-    const apiPayload = newMessages
-      .filter(msg => msg.role !== 'system')
-      .map(msg => ({ role: msg.role, content: msg.content }));
-
-    // Truyền tham số isDamageAnalysis dựa trên việc có ảnh hay không
-    const aiResponseContent = await getAiResponse(apiPayload, selectedModel, hasImage);
+    let aiResponseContent;
+    
+    // Tự động chọn model dựa trên chế độ và có ảnh hay không
+    if (hasImage) {
+      // Có ảnh: Luôn dùng gemini-vision
+      const { convertImageToBase64 } = await import('./services/api');
+      
+      try {
+        const base64Image = await convertImageToBase64(pickedImage);
+        aiResponseContent = await getAiResponse([], 'gemini-vision', shouldUseDamageAnalysis, base64Image);
+      } catch (error) {
+        console.error('Lỗi xử lý ảnh:', error);
+        aiResponseContent = 'Xin lỗi, có lỗi xảy ra khi xử lý ảnh.';
+      }
+    } else {
+      // Không có ảnh: Dùng gemini text model cho chat thường
+      const apiPayload = newMessages
+        .filter(msg => msg.role !== 'system')
+        .map(msg => ({ role: msg.role, content: msg.content }));
+      
+      aiResponseContent = await getAiResponse(apiPayload, 'gemini', false);
+    }
 
     // Parse sản phẩm nếu là phân tích hư hỏng
     let aiResponseMessage;
-    if (hasImage) {
+    if (shouldUseDamageAnalysis) {
       console.log('Đang parse phản hồi AI cho phân tích hư hỏng...');
       const parsedResponse = parseProductSuggestions(aiResponseContent);
       const validatedProducts = validateProductData(parsedResponse.products);
@@ -275,20 +310,19 @@ const App = () => {
           theme={theme}
         />
 
-        {/* Model Selection Modal */}
-        <ModelSelectionModal
+        {/* Model Selection Modal - Tạm thời ẩn */}
+        {/* <ModelSelectionModal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           onSelectModel={selectModel}
           selectedModel={selectedModel}
-        />
+        /> */}
 
         {/* Header */}
         <Header
-          selectedModel={selectedModel}
-          onOpenModal={() => setModalVisible(true)}
-          onOpenChatHistory={() => setChatHistoryVisible(true)}
           onNewChat={() => setSidebarVisible(true)}
+          isDamageMode={isDamageMode}
+          onToggleDamageMode={toggleDamageMode}
           theme={theme}
         />
 
