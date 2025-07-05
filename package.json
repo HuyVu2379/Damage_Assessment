@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.1.2",
-    "expo": "^53.0.16",
+    "expo": "^53.0.17",
     "expo-av": "^15.1.7",
     "expo-camera": "^16.1.10",
     "expo-dev-client": "^5.2.3",
@@ -23,7 +23,7 @@
     "react-native-safe-area-context": "5.4.0"
   },
   "devDependencies": {
-      "@babel/core": "^7.20.0",
+    "@babel/core": "^7.20.0",
     "@expo/config-plugins": "~10.0.0",
     "@react-native-community/cli": "latest"
   },

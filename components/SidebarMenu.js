@@ -43,7 +43,7 @@ const SidebarMenu = ({ visible, onClose, onNewChat, onLoadConversation, currentM
             const history = await chatStorage.getChatHistory();
             setChatHistory(history);
         } catch (error) {
-            console.error('Error loading chat history:', error);
+            // Loại bỏ console.error để giảm lag terminal
         }
     };
 
@@ -83,7 +83,7 @@ const SidebarMenu = ({ visible, onClose, onNewChat, onLoadConversation, currentM
                             await chatStorage.deleteChat(chatId);
                             loadChatHistory();
                         } catch (error) {
-                            console.error('Error deleting chat:', error);
+                            // Loại bỏ console.error để giảm lag terminal
                         }
                     },
                 },

@@ -154,7 +154,7 @@ export const analyzeImageWithGemini = async (imageBase64, prompt = SMART_IMAGE_A
             ]
         });
 
-        console.log('Đang gửi ảnh đến Gemini Pro Vision...');
+        // Loại bỏ console.log để giảm lag terminal
         
         const response = await fetch(config.endpoint, {
             method: 'POST',
@@ -166,12 +166,12 @@ export const analyzeImageWithGemini = async (imageBase64, prompt = SMART_IMAGE_A
 
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('Chi tiết lỗi Gemini Vision:', errorData);
+            // Loại bỏ console.error để giảm lag terminal
             throw new Error(`Lỗi API Gemini Vision: ${errorData.error?.message || 'Unknown error'}`);
         }
 
         const data = await response.json();
-        console.log('Response từ Gemini Vision:', data);
+        // Loại bỏ console.log để giảm lag terminal
         
         const aiMessage = data.candidates[0]?.content?.parts[0]?.text?.trim();
 
@@ -179,11 +179,11 @@ export const analyzeImageWithGemini = async (imageBase64, prompt = SMART_IMAGE_A
             throw new Error("Không nhận được nội dung hợp lệ từ Gemini Vision.");
         }
 
-        console.log('Phân tích ảnh thành công:', aiMessage);
+        // Loại bỏ console.log để giảm lag terminal
         return aiMessage;
 
     } catch (error) {
-        console.error('Lỗi khi phân tích ảnh với Gemini Vision:', error);
+        // Loại bỏ console.error để giảm lag terminal
         return `Xin lỗi, đã có lỗi xảy ra khi phân tích ảnh: ${error.message}`;
     }
 };
@@ -195,14 +195,14 @@ export const analyzeImageWithGemini = async (imageBase64, prompt = SMART_IMAGE_A
  */
 export const convertImageToBase64 = async (uri) => {
     try {
-        console.log('Đang chuyển đổi ảnh sang Base64:', uri);
+        // Loại bỏ console.log để giảm lag terminal
         const base64 = await FileSystem.readAsStringAsync(uri, {
             encoding: FileSystem.EncodingType.Base64,
         });
-        console.log('Chuyển đổi Base64 thành công');
+        // Loại bỏ console.log để giảm lag terminal
         return base64;
     } catch (error) {
-        console.error('Lỗi khi chuyển đổi ảnh sang Base64:', error);
+        // Loại bỏ console.error để giảm lag terminal
         throw error;
     }
 };

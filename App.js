@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -26,10 +26,15 @@ import SidebarMenu from './components/SidebarMenu';
 // Hooks
 // import { useAudioRecording } from './hooks/useAudioRecording';
 import { useCamera } from './hooks/useCamera';
+import { useOptimizedInput } from './hooks/useDebounce';
 
 // Utils
 import { theme } from './utils/theme';
 import { verticalScale, scale } from './utils/scaling';
+
+// Tắt logs để giảm lag terminal
+const log = __DEV__ ? console.log : () => {};
+const error = __DEV__ ? console.error : () => {};
 
 // API
 import { getAiResponse, parseProductSuggestions, validateProductData } from './services/api';
@@ -39,7 +44,10 @@ const App = () => {
   const [messages, setMessages] = useState([
     { role: 'system', content: 'Chào bạn! Tôi là chuyên gia xây dựng AI. Gửi ảnh hoặc câu hỏi, tôi sẽ tự động nhận diện và tư vấn phù hợp!' },
   ]);
-  const [inputText, setInputText] = useState('');
+  
+  // Optimize TextInput với debounce
+  const { displayValue: inputText, debouncedValue: debouncedInput, setValue: setInputText } = useOptimizedInput('', 100);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gemini'); // Mặc định là gemini
   const [pickedImage, setPickedImage] = useState(null);
@@ -54,18 +62,21 @@ const App = () => {
   // Load cuộc trò chuyện cuối cùng khi app khởi động
   useEffect(() => {
     loadLastConversation();
-  }, []);  // Auto scroll to end when new messages are added
+  }, []);
+
+  // FIX: Auto scroll to end when new messages are added
   useEffect(() => {
-    if (messages.length > previousMessagesLength.current && shouldScrollToEnd) {
-      // Chỉ dùng một timeout duy nhất để tránh xung đột
+    if (messages.length > previousMessagesLength.current) {
+      // Luôn scroll khi có message mới
       const timeoutId = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+        setShouldScrollToEnd(true);
+      }, 150);
 
       return () => clearTimeout(timeoutId);
     }
     previousMessagesLength.current = messages.length;
-  }, [messages, shouldScrollToEnd]);
+  }, [messages]);
 
   // Auto-save cuộc trò chuyện hiện tại khi có thay đổi
   useEffect(() => {
@@ -169,7 +180,7 @@ const App = () => {
         // AI sẽ tự động nhận diện và phản hồi phù hợp
         aiResponseContent = await getAiResponse([], 'gemini-vision', true, base64Image);
       } catch (error) {
-        console.error('Lỗi xử lý ảnh:', error);
+        error('Lỗi xử lý ảnh:', error);
         aiResponseContent = 'Xin lỗi, có lỗi xảy ra khi xử lý ảnh. Bạn có thể thử lại không?';
       }
     } else {
@@ -185,16 +196,8 @@ const App = () => {
     let aiResponseMessage;
     if (hasImage) {
       // Với ảnh, AI có thể tự động gợi ý sản phẩm nếu phát hiện hư hỏng
-      console.log('Đang parse phản hồi AI cho ảnh...');
-      console.log('AI Response Content:', aiResponseContent);
-      
       const parsedResponse = parseProductSuggestions(aiResponseContent);
-      console.log('Parsed Response:', parsedResponse);
-      
       const validatedProducts = validateProductData(parsedResponse.products);
-
-      console.log('Tạo tin nhắn AI với sản phẩm:', validatedProducts);
-      console.log('Analysis content:', parsedResponse.analysis);
       
       aiResponseMessage = {
         role: 'assistant',
@@ -208,12 +211,11 @@ const App = () => {
     setMessages(prev => [...prev, aiResponseMessage]);
     setIsLoading(false);
 
-    // Chỉ force scroll một lần khi cần thiết
-    if (shouldScrollToEnd) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 150);
-    }
+    // FIX: Force scroll to end sau khi có AI response
+    setShouldScrollToEnd(true);
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 200);
   };
 
   // Test function để kiểm tra hiển thị sản phẩm
@@ -239,23 +241,55 @@ const App = () => {
     setMessages(prev => [...prev, testMessage]);
   };
 
-  const renderMessageItem = ({ item }) => (
-    <MessageItem item={item} />
-  );
+  // Optimize renderMessageItem với useCallback để giảm re-render
+  const renderMessageItem = useCallback(({ item, index }) => (
+    <MessageItem 
+      item={item} 
+      index={index}
+    />
+  ), []);
+
+  // Optimize keyExtractor
+  const keyExtractor = useCallback((item, index) => {
+    return `message-${index}-${item.role}`;
+  }, []);
+
+  // Optimize getItemLayout nếu messages có height cố định
+  const getItemLayout = useCallback((data, index) => {
+    const ESTIMATED_ITEM_HEIGHT = 120; // Ước tính height cho mỗi message
+    return {
+      length: ESTIMATED_ITEM_HEIGHT,
+      offset: ESTIMATED_ITEM_HEIGHT * index,
+      index,
+    };
+  }, []);
 
   const canSendMessage = inputText.trim().length > 0 || pickedImage;
 
-  // Hàm scroll to end thủ công
-  const scrollToEnd = () => {
-    setShouldScrollToEnd(true);
-    // Sử dụng requestAnimationFrame để đảm bảo smooth scroll
-    requestAnimationFrame(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    });
-  };
+  // Hàm scroll to end thủ công - FIX
+  const scrollToEnd = useCallback(() => {
+    // Thực hiện scroll ngay lập tức với nhiều phương pháp để đảm bảo hoạt động
+    if (flatListRef.current) {
+      // Phương pháp 1: scrollToEnd trực tiếp
+      flatListRef.current.scrollToEnd({ animated: true });
+      
+      // Phương pháp 2: scrollToOffset với giá trị lớn (backup)
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ 
+          offset: 999999, 
+          animated: true 
+        });
+      }, 50);
+      
+      // Chỉ set state sau khi scroll hoàn thành để tránh button biến mất quá sớm
+      setTimeout(() => {
+        setShouldScrollToEnd(true);
+      }, 400); // Đợi animation scroll hoàn thành
+    }
+  }, []);
 
-  // Handler để phát hiện khi user scroll
-  const handleScroll = (event) => {
+  // Handler để phát hiện khi user scroll - FIX
+  const handleScroll = useCallback((event) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
 
     // Kiểm tra nếu content size nhỏ hơn layout thì luôn ở bottom
@@ -264,12 +298,13 @@ const App = () => {
       return;
     }
 
-    // Kiểm tra có đang ở cuối không với threshold lớn hơn
+    // Kiểm tra có đang ở cuối không với threshold chính xác hơn
     const distanceFromBottom = contentSize.height - (layoutMeasurement.height + contentOffset.y);
-    const isAtBottom = distanceFromBottom <= 100; // Tăng threshold lên 100px
+    const isAtBottom = distanceFromBottom <= 100; // Tăng threshold lên 100px để dễ detect hơn
 
-    setShouldScrollToEnd(isAtBottom);
-  };
+    // Chỉ update state khi có thay đổi thực sự để tránh re-render không cần thiết
+    setShouldScrollToEnd(prev => prev !== isAtBottom ? isAtBottom : prev);
+  }, []);
 
   return (
     <PaperProvider theme={theme}>
@@ -320,22 +355,28 @@ const App = () => {
             ref={flatListRef}
             data={messages}
             renderItem={renderMessageItem}
-            keyExtractor={(item, index) => `message-${index}-${item.role}-${Date.now()}`}
+            keyExtractor={keyExtractor}
             style={styles.chatMessages}
             contentContainerStyle={{ paddingVertical: verticalScale(10) }}
             ListFooterComponent={isLoading ? <LoadingIndicator theme={theme} /> : null}
             onScroll={handleScroll}
             scrollEventThrottle={100}
-            removeClippedSubviews={false}
-            initialNumToRender={15}
-            maxToRenderPerBatch={10}
-            windowSize={21}
-            getItemLayout={null}
+            
+            // Performance optimizations
+            removeClippedSubviews={true}
+            initialNumToRender={8}
+            maxToRenderPerBatch={5}
+            windowSize={10}
+            updateCellsBatchingPeriod={50}
+            getItemLayout={getItemLayout}
+            
+            // Scroll optimization
             onContentSizeChange={(contentWidth, contentHeight) => {
-              // Chỉ auto scroll khi shouldScrollToEnd = true và không đang loading
-              if (shouldScrollToEnd && !isLoading) {
+              // Chỉ auto scroll khi shouldScrollToEnd = true
+              if (shouldScrollToEnd) {
+                // Sử dụng requestAnimationFrame để đảm bảo layout đã hoàn thành
                 requestAnimationFrame(() => {
-                  flatListRef.current?.scrollToEnd({ animated: false });
+                  flatListRef.current?.scrollToEnd({ animated: true });
                 });
               }
             }}

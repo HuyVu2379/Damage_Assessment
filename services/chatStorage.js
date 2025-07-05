@@ -17,7 +17,7 @@ export const chatStorage = {
 
             return true;
         } catch (error) {
-            console.error('Lỗi khi lưu cuộc trò chuyện:', error);
+            // Loại bỏ console.error để giảm lag terminal
             return false;
         }
     },
@@ -71,7 +71,7 @@ export const chatStorage = {
                 await AsyncStorage.setItem(SAVED_CONVERSATIONS_KEY, jsonValue);
             }
         } catch (error) {
-            console.error('Lỗi khi tự động lưu lịch sử:', error);
+            // Loại bỏ console.error để giảm lag terminal
         }
     },
 
@@ -81,7 +81,7 @@ export const chatStorage = {
             const jsonValue = await AsyncStorage.getItem(CHAT_HISTORY_KEY);
             return jsonValue != null ? JSON.parse(jsonValue) : null;
         } catch (error) {
-            console.error('Lỗi khi tải cuộc trò chuyện:', error);
+            // Loại bỏ console.error để giảm lag terminal
             return null;
         }
     },
@@ -89,9 +89,9 @@ export const chatStorage = {
     // Lưu cuộc trò chuyện với tên cụ thể
     saveConversation: async (name, messages) => {
         try {
-            console.log('Saving conversation:', { name, messagesCount: messages.length });
+            // Loại bỏ console.log để giảm lag terminal
             const existingConversations = await chatStorage.getSavedConversations();
-            console.log('Existing conversations:', existingConversations.length);
+            // Loại bỏ console.log để giảm lag terminal
 
             const newConversation = {
                 id: Date.now().toString(),
@@ -99,17 +99,17 @@ export const chatStorage = {
                 messages: messages,
                 createdAt: new Date().toISOString(),
             };
-            console.log('New conversation:', newConversation);
+            // Loại bỏ console.log để giảm lag terminal
 
             const updatedConversations = [...existingConversations, newConversation];
-            console.log('Updated conversations:', updatedConversations.length);
+            // Loại bỏ console.log để giảm lag terminal
 
             const jsonValue = JSON.stringify(updatedConversations);
             await AsyncStorage.setItem(SAVED_CONVERSATIONS_KEY, jsonValue);
-            console.log('Conversation saved successfully');
+            // Loại bỏ console.log để giảm lag terminal
             return true;
         } catch (error) {
-            console.error('Lỗi khi lưu cuộc trò chuyện có tên:', error);
+            // Loại bỏ console.error để giảm lag terminal
             return false;
         }
     },
@@ -121,7 +121,7 @@ export const chatStorage = {
             const result = jsonValue != null ? JSON.parse(jsonValue) : [];
             return result;
         } catch (error) {
-            console.error('Lỗi khi lấy danh sách cuộc trò chuyện:', error);
+            // Loại bỏ console.error để giảm lag terminal
             return [];
         }
     },
@@ -138,7 +138,7 @@ export const chatStorage = {
             const conversation = conversations.find(conv => conv.id === conversationId);
             return conversation ? conversation.messages : null;
         } catch (error) {
-            console.error('Lỗi khi tải cuộc trò chuyện cụ thể:', error);
+            // Loại bỏ console.error để giảm lag terminal
             return null;
         }
     },
@@ -152,7 +152,7 @@ export const chatStorage = {
             await AsyncStorage.setItem(SAVED_CONVERSATIONS_KEY, jsonValue);
             return true;
         } catch (error) {
-            console.error('Lỗi khi xóa cuộc trò chuyện:', error);
+            // Loại bỏ console.error để giảm lag terminal
             return false;
         }
     },
@@ -169,7 +169,7 @@ export const chatStorage = {
             await AsyncStorage.removeItem(SAVED_CONVERSATIONS_KEY);
             return true;
         } catch (error) {
-            console.error('Lỗi khi xóa tất cả dữ liệu:', error);
+            // Loại bỏ console.error để giảm lag terminal
             return false;
         }
     }

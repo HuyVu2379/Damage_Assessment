@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,27 +10,27 @@ import {
 } from 'react-native';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 
-const ProductSuggestions = ({ products }) => {
-    console.log('ProductSuggestions nhận được props:', products);
+// Tắt logs để giảm lag terminal
+const log = __DEV__ ? () => {} : () => {};
 
+const ProductSuggestions = memo(({ products }) => {
+    // Tắt logs để giảm lag terminal
+    
     if (!products || products.length === 0) {
-        console.log('Không có sản phẩm để hiển thị');
         return null;
     }
 
-    console.log('Sẽ hiển thị', products.length, 'sản phẩm');
-
-    const handleProductPress = (url) => {
+    const handleProductPress = useCallback((url) => {
         try {
             if (url && url !== '#') {
-                Linking.openURL(url).catch(err =>
-                    console.error('Không thể mở link:', err)
-                );
+                Linking.openURL(url).catch(() => {
+                    // Loại bỏ log để giảm lag
+                });
             }
         } catch (error) {
-            console.error('Lỗi khi xử lý link sản phẩm:', error);
+            // Loại bỏ console.error để giảm lag terminal
         }
-    };
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -57,7 +57,7 @@ const ProductSuggestions = ({ products }) => {
                                     style={styles.productImage}
                                     resizeMode="contain"
                                     onError={() => {
-                                        console.log('Lỗi tải hình ảnh:', product.imageUrl);
+                                        // Tắt log để giảm lag terminal
                                     }}
                                 />
                             </View>
@@ -91,7 +91,7 @@ const ProductSuggestions = ({ products }) => {
             </ScrollView>
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     container: {

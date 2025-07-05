@@ -18,7 +18,10 @@ import {
     Divider,
 } from 'react-native-paper';
 import { chatStorage } from '../services/chatStorage';
-import { verticalScale, scale } from '../utils/scaling';
+import { scale, verticalScale, moderateScale } from '../utils/scaling';
+
+// Tắt logs để giảm lag terminal
+const log = __DEV__ ? () => {} : () => {};
 
 const ChatHistoryModal = ({ visible, onClose, onLoadConversation, currentMessages, theme }) => {
     const [activeTab, setActiveTab] = useState('save');
@@ -31,17 +34,17 @@ const ChatHistoryModal = ({ visible, onClose, onLoadConversation, currentMessage
     const [viewDialogVisible, setViewDialogVisible] = useState(false);
 
     useEffect(() => {
-        console.log('useEffect triggered:', { visible, activeTab, sortBy });
+        // Tắt log để giảm lag
         if (visible && activeTab === 'load') {
             loadSavedConversations();
         }
     }, [visible, activeTab, sortBy, loadSavedConversations]);
 
     const loadSavedConversations = useCallback(async () => {
-        console.log('Loading saved conversations...');
+        // Tắt log để giảm lag
         setIsLoading(true);
         const conversations = await chatStorage.getSavedConversations();
-        console.log('Loaded conversations:', conversations);
+        // Tắt log để giảm lag
         let sortedConversations = [...conversations];
 
         // Sắp xếp theo loại
@@ -58,7 +61,7 @@ const ChatHistoryModal = ({ visible, onClose, onLoadConversation, currentMessage
         }
 
         setSavedConversations(sortedConversations);
-        console.log('Set conversations:', sortedConversations);
+        // Tắt log để giảm lag
         setIsLoading(false);
     }, [sortBy]);
 
@@ -180,19 +183,17 @@ const ChatHistoryModal = ({ visible, onClose, onLoadConversation, currentMessage
             .map(msg => `${msg.role === 'user' ? 'Người dùng' : 'AI'}: ${msg.content}`)
             .join('\n\n')}\n\n=== Kết thúc ===`;
 
-        // Hiển thị nội dung xuất qua Alert và console
+        // Hiển thị nội dung xuất qua Alert (không log ra console để tránh spam)
         Alert.alert(
             `Xuất: ${conversation.name}`,
-            `Đã tạo nội dung xuất! Nội dung đã được xuất ra console.`,
+            `Đã tạo nội dung xuất thành công!`,
             [
                 { text: 'Đóng', style: 'cancel' },
                 {
                     text: 'Xem nội dung',
                     onPress: () => {
-                        console.log('=== EXPORTED CONVERSATION ===');
-                        console.log(exportText);
-                        console.log('=== END EXPORTED CONVERSATION ===');
-                        Alert.alert('Thành công', 'Đã xuất nội dung cuộc trò chuyện! Kiểm tra console để xem chi tiết.');
+                        // Loại bỏ console.log để giảm lag terminal
+                        Alert.alert('Thành công', 'Đã xuất nội dung cuộc trò chuyện!');
                     }
                 }
             ]
@@ -351,15 +352,7 @@ const ChatHistoryModal = ({ visible, onClose, onLoadConversation, currentMessage
         return 0;
     });
 
-    console.log('Render state:', {
-        savedConversations: savedConversations.length,
-        filteredConversations: filteredConversations.length,
-        sortedConversations: sortedConversations.length,
-        searchQuery,
-        sortBy,
-        activeTab,
-        visible
-    });
+    // Tắt log để giảm lag terminal
 
     // Render modal xem chi tiết
     const renderViewModal = () => {

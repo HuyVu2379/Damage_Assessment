@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 import { theme } from '../utils/theme';
 import ProductSuggestions from './ProductSuggestions';
 
-const MessageItem = ({ item }) => {
+const MessageItem = memo(({ item, index }) => {
     if (item.role === 'system') return null;
 
     const isUserMessage = item.role === 'user';
@@ -40,7 +40,7 @@ const MessageItem = ({ item }) => {
             </View>
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     messageContainer: {
