@@ -114,6 +114,20 @@ export const chatStorage = {
         }
     },
 
+    /** // <--- Thêm dòng này
+   * @param {Array} history
+   */ // <--- Và dòng này
+    saveChatHistory: async (history) => {
+        try {
+            const jsonValue = JSON.stringify(history);
+            await AsyncStorage.setItem(SAVED_CONVERSATIONS_KEY, jsonValue);
+            return true;
+        } catch (error) {
+            console.error('Lỗi khi lưu toàn bộ lịch sử chat:', error);
+            return false;
+        }
+    },
+
     // Lấy danh sách cuộc trò chuyện đã lưu
     getSavedConversations: async () => {
         try {
