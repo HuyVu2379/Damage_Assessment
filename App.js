@@ -316,9 +316,9 @@ const App = () => {
         />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardAvoidingContainer}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <FlatList
             ref={flatListRef}
@@ -363,32 +363,35 @@ const App = () => {
               <IconButton
                 icon="chevron-down"
                 size={24}
-                iconColor={theme.colors.primary}
+                iconColor={theme.colors.accent}
                 style={styles.scrollIcon}
               />
             </TouchableOpacity>
           )}
 
-          {/* Image Preview */}
-          <ImagePreview
-            imageUri={pickedImage}
-            onRemove={() => setPickedImage(null)}
-          />
+          {/* Bottom Input Container - Chứa cả ImagePreview và ChatInput */}
+          <View style={styles.bottomInputContainer}>
+            {/* Image Preview */}
+            <ImagePreview
+              imageUri={pickedImage}
+              onRemove={() => setPickedImage(null)}
+            />
 
-          {/* Chat Input */}
-          <ChatInput
-            inputText={inputText}
-            onChangeText={setInputText}
-            isLoading={isLoading}
-            // isRecording={isRecording}
-            onOpenCamera={openCamera}
-            onPickImage={pickImage}
-            // onStartRecording={startRecording}
-            // onStopRecording={stopRecording}
-            onSendMessage={handleSendMessage}
-            theme={theme}
-            canSend={canSendMessage}
-          />
+            {/* Chat Input */}
+            <ChatInput
+              inputText={inputText}
+              onChangeText={setInputText}
+              isLoading={isLoading}
+              // isRecording={isRecording}
+              onOpenCamera={openCamera}
+              onPickImage={pickImage}
+              // onStartRecording={startRecording}
+              // onStopRecording={stopRecording}
+              onSendMessage={handleSendMessage}
+              theme={theme}
+              canSend={canSendMessage}
+            />
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </PaperProvider>
@@ -398,7 +401,7 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa'
+    backgroundColor: '#FFFEF7' // Vàng rất nhạt, sáng hơn
   },
   keyboardAvoidingContainer: {
     flex: 1
@@ -407,10 +410,13 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: scale(10)
   },
+  bottomInputContainer: {
+    backgroundColor: '#FFFEF7',
+  },
   scrollToBottomButton: {
     position: 'absolute',
     right: scale(20),
-    bottom: verticalScale(80),
+    bottom: verticalScale(100), // Tăng khoảng cách để không bị che bởi input và ảnh
     backgroundColor: 'white',
     borderRadius: 25,
     elevation: 5,
@@ -421,6 +427,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    zIndex: 1000, // Đảm bảo nút luôn hiện trên cùng
   },
   scrollIcon: {
     margin: 0,
