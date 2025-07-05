@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -26,22 +26,31 @@ import SidebarMenu from './components/SidebarMenu';
 // Hooks
 // import { useAudioRecording } from './hooks/useAudioRecording';
 import { useCamera } from './hooks/useCamera';
+import { useOptimizedInput } from './hooks/useDebounce';
 
 // Utils
 import { theme } from './utils/theme';
 import { verticalScale, scale } from './utils/scaling';
 
+// Tắt logs để giảm lag terminal
+const log = __DEV__ ? console.log : () => {};
+const error = __DEV__ ? console.error : () => {};
+
 // API
 import { getAiResponse, parseProductSuggestions, validateProductData } from './services/api';
+import { getAiResponse as getAiResponseWithImage } from './services/api';
 import { chatStorage } from './services/chatStorage';
 
 const App = () => {
   const [messages, setMessages] = useState([
-    { role: 'system', content: 'Chào bạn, hãy chọn model và bắt đầu!' },
+    { role: 'system', content: 'Chào bạn! Tôi là chuyên gia xây dựng AI. Gửi ảnh hoặc câu hỏi, tôi sẽ tự động nhận diện và tư vấn phù hợp!' },
   ]);
-  const [inputText, setInputText] = useState('');
+  
+  // Optimize TextInput với debounce
+  const { displayValue: inputText, debouncedValue: debouncedInput, setValue: setInputText } = useOptimizedInput('', 100);
+  
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('groq');
+  const [selectedModel, setSelectedModel] = useState('gemini'); // Mặc định là gemini
   const [pickedImage, setPickedImage] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [chatHistoryVisible, setChatHistoryVisible] = useState(false);
@@ -54,18 +63,21 @@ const App = () => {
   // Load cuộc trò chuyện cuối cùng khi app khởi động
   useEffect(() => {
     loadLastConversation();
-  }, []);  // Auto scroll to end when new messages are added
+  }, []);
+
+  // FIX: Auto scroll to end when new messages are added
   useEffect(() => {
-    if (messages.length > previousMessagesLength.current && shouldScrollToEnd) {
-      // Chỉ dùng một timeout duy nhất để tránh xung đột
+    if (messages.length > previousMessagesLength.current) {
+      // Luôn scroll khi có message mới
       const timeoutId = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+        setShouldScrollToEnd(true);
+      }, 150);
 
       return () => clearTimeout(timeoutId);
     }
     previousMessagesLength.current = messages.length;
-  }, [messages, shouldScrollToEnd]);
+  }, [messages]);
 
   // Auto-save cuộc trò chuyện hiện tại khi có thay đổi
   useEffect(() => {
@@ -94,7 +106,20 @@ const App = () => {
     const lastMessages = await chatStorage.loadCurrentChat();
     if (lastMessages && lastMessages.length > 1) {
       setMessages(lastMessages);
-      // Đảm bảo scroll to bottom sau khi load
+      setShouldScrollToEnd(true);
+      // Đảm bảo scroll to bottom sau khi load với nhiều lần thử
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 500);
+    } else {
+      // Nếu không có tin nhắn cũ, đảm bảo scroll cho tin nhắn hệ thống
+      setShouldScrollToEnd(true);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: false });
       }, 200);
@@ -103,7 +128,7 @@ const App = () => {
 
   // Bắt đầu cuộc trò chuyện mới
   const startNewChat = () => {
-    setMessages([{ role: 'system', content: 'Chào bạn, hãy chọn model và bắt đầu!' }]);
+    setMessages([{ role: 'system', content: 'Chào bạn! Tôi là chuyên gia xây dựng AI. Gửi ảnh hoặc câu hỏi, tôi sẽ tự động nhận diện và tư vấn phù hợp!' }]);
     setInputText('');
     setPickedImage(null);
     setShouldScrollToEnd(true);
@@ -115,10 +140,13 @@ const App = () => {
     setInputText('');
     setPickedImage(null);
     setShouldScrollToEnd(true);
-    // Scroll to bottom sau khi load conversation
+    // Scroll to bottom sau khi load conversation với retry
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: false });
-    }, 200);
+    }, 100);
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 300);
   };
 
   // Handlers
@@ -136,8 +164,10 @@ const App = () => {
     setShouldScrollToEnd(true);
 
     let messageContent = inputText.trim();
-    if (pickedImage) {
+    if (pickedImage && messageContent) {
       messageContent = `[Đã gửi 1 ảnh] ${messageContent}`;
+    } else if (pickedImage) {
+      messageContent = `[Đã gửi 1 ảnh]`;
     }
 
     const userMessage = {
@@ -148,28 +178,59 @@ const App = () => {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
 
-    // Lưu trạng thái có ảnh để quyết định loại prompt
+    // Lưu trạng thái có ảnh - AI sẽ tự động nhận diện và phản hồi phù hợp
     const hasImage = !!pickedImage;
 
     setInputText('');
     setPickedImage(null);
     setIsLoading(true);
 
-    const apiPayload = newMessages
-      .filter(msg => msg.role !== 'system')
-      .map(msg => ({ role: msg.role, content: msg.content }));
+    let aiResponseContent;
+    
+    // Tự động chọn model: có ảnh dùng gemini-vision, không có ảnh dùng gemini text
+    if (hasImage) {
+      // Có ảnh: Luôn dùng gemini-vision với prompt thông minh
+      try {
+        // Dynamically import để tránh blocking
+        const { convertImageToBase64 } = await import('./services/api_new');
+        
+        const base64Image = await convertImageToBase64(pickedImage);
+        
+        // Timeout để tránh bị treo
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout after 30 seconds')), 30000)
+        );
+        
+        aiResponseContent = await Promise.race([
+          getAiResponseWithImage([], 'gemini-vision', true, base64Image),
+          timeoutPromise
+        ]);
+      } catch (error) {
+        error('Lỗi xử lý ảnh:', error);
+        setIsLoading(false);
+        Alert.alert(
+          'Lỗi xử lý ảnh', 
+          'Không thể phân tích ảnh. Vui lòng thử lại hoặc gửi tin nhắn text.',
+          [{ text: 'OK', onPress: () => {} }]
+        );
+        return; // Dừng execution nếu có lỗi
+      }
+    } else {
+      // Không có ảnh: Dùng gemini text model cho chat thường
+      const apiPayload = newMessages
+        .filter(msg => msg.role !== 'system')
+        .map(msg => ({ role: msg.role, content: msg.content }));
+      
+      aiResponseContent = await getAiResponse(apiPayload, 'gemini', false);
+    }
 
-    // Truyền tham số isDamageAnalysis dựa trên việc có ảnh hay không
-    const aiResponseContent = await getAiResponse(apiPayload, selectedModel, hasImage);
-
-    // Parse sản phẩm nếu là phân tích hư hỏng
+    // Parse sản phẩm nếu AI phát hiện cần gợi ý sản phẩm
     let aiResponseMessage;
     if (hasImage) {
-      console.log('Đang parse phản hồi AI cho phân tích hư hỏng...');
+      // Với ảnh, AI có thể tự động gợi ý sản phẩm nếu phát hiện hư hỏng
       const parsedResponse = parseProductSuggestions(aiResponseContent);
       const validatedProducts = validateProductData(parsedResponse.products);
-
-      console.log('Tạo tin nhắn AI với sản phẩm:', validatedProducts);
+      
       aiResponseMessage = {
         role: 'assistant',
         content: parsedResponse.analysis,
@@ -182,12 +243,11 @@ const App = () => {
     setMessages(prev => [...prev, aiResponseMessage]);
     setIsLoading(false);
 
-    // Chỉ force scroll một lần khi cần thiết
-    if (shouldScrollToEnd) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 150);
-    }
+    // FIX: Force scroll to end sau khi có AI response
+    setShouldScrollToEnd(true);
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 200);
   };
 
   // Test function để kiểm tra hiển thị sản phẩm
@@ -213,23 +273,42 @@ const App = () => {
     setMessages(prev => [...prev, testMessage]);
   };
 
-  const renderMessageItem = ({ item }) => (
-    <MessageItem item={item} />
-  );
+  // Optimize renderMessageItem với useCallback để giảm re-render
+  const renderMessageItem = useCallback(({ item, index }) => (
+    <MessageItem 
+      item={item} 
+      index={index}
+    />
+  ), []); // Empty deps array vì MessageItem đã được memo với custom comparison
+
+  // Optimize keyExtractor
+  const keyExtractor = useCallback((item, index) => {
+    return `message-${index}-${item.role}`;
+  }, []);
 
   const canSendMessage = inputText.trim().length > 0 || pickedImage;
 
-  // Hàm scroll to end thủ công
-  const scrollToEnd = () => {
-    setShouldScrollToEnd(true);
-    // Sử dụng requestAnimationFrame để đảm bảo smooth scroll
-    requestAnimationFrame(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    });
-  };
+  // Hàm scroll to end thủ công - FIX cải tiến
+  const scrollToEnd = useCallback(() => {
+    // Kiểm tra ref có tồn tại không
+    if (!flatListRef.current) return;
+    
+    try {
+      // Phương pháp đơn giản và ổn định nhất
+      flatListRef.current.scrollToEnd({ animated: true });
+      
+      // Set state sau một delay ngắn để tránh conflict
+      setTimeout(() => {
+        setShouldScrollToEnd(true);
+      }, 300);
+    } catch (error) {
+      // Fallback nếu có lỗi
+      console.warn('Scroll error:', error);
+    }
+  }, []);
 
-  // Handler để phát hiện khi user scroll
-  const handleScroll = (event) => {
+  // Handler để phát hiện khi user scroll - FIX
+  const handleScroll = useCallback((event) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
 
     // Kiểm tra nếu content size nhỏ hơn layout thì luôn ở bottom
@@ -238,12 +317,13 @@ const App = () => {
       return;
     }
 
-    // Kiểm tra có đang ở cuối không với threshold lớn hơn
+    // Kiểm tra có đang ở cuối không với threshold chính xác hơn
     const distanceFromBottom = contentSize.height - (layoutMeasurement.height + contentOffset.y);
-    const isAtBottom = distanceFromBottom <= 100; // Tăng threshold lên 100px
+    const isAtBottom = distanceFromBottom <= 100; // Tăng threshold lên 100px để dễ detect hơn
 
-    setShouldScrollToEnd(isAtBottom);
-  };
+    // Chỉ update state khi có thay đổi thực sự để tránh re-render không cần thiết
+    setShouldScrollToEnd(prev => prev !== isAtBottom ? isAtBottom : prev);
+  }, []);
 
   return (
     <PaperProvider theme={theme}>
@@ -275,57 +355,63 @@ const App = () => {
           theme={theme}
         />
 
-        {/* Model Selection Modal */}
-        <ModelSelectionModal
+        {/* Model Selection Modal - Tạm thời ẩn */}
+        {/* <ModelSelectionModal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           onSelectModel={selectModel}
           selectedModel={selectedModel}
-        />
+        /> */}
 
         {/* Header */}
         <Header
-          selectedModel={selectedModel}
-          onOpenModal={() => setModalVisible(true)}
-          onOpenChatHistory={() => setChatHistoryVisible(true)}
           onNewChat={() => setSidebarVisible(true)}
           theme={theme}
         />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidingContainer}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        >
+        <View style={styles.mainContainer}>
           <FlatList
             ref={flatListRef}
             data={messages}
             renderItem={renderMessageItem}
-            keyExtractor={(item, index) => `message-${index}-${item.role}-${Date.now()}`}
+            keyExtractor={keyExtractor}
             style={styles.chatMessages}
             contentContainerStyle={{ paddingVertical: verticalScale(10) }}
             ListFooterComponent={isLoading ? <LoadingIndicator theme={theme} /> : null}
             onScroll={handleScroll}
-            scrollEventThrottle={100}
-            removeClippedSubviews={false}
-            initialNumToRender={15}
-            maxToRenderPerBatch={10}
-            windowSize={21}
-            getItemLayout={null}
+            scrollEventThrottle={200} // Tăng từ 100 lên 200 để giảm tần suất event
+            
+            // Performance optimizations - Tối ưu cho list lớn
+            removeClippedSubviews={true}
+            initialNumToRender={4} // Giảm xuống 4 để tăng performance
+            maxToRenderPerBatch={2} // Giảm xuống 2
+            windowSize={6} // Giảm xuống 6
+            updateCellsBatchingPeriod={200} // Tăng lên 200ms để giảm tần suất update
+            getItemLayout={undefined} // Tắt getItemLayout để tránh conflict
+            legacyImplementation={false}
+            disableVirtualization={false} // Đảm bảo virtualization được bật
+            
+            // Scroll optimization - Cải tiến
             onContentSizeChange={(contentWidth, contentHeight) => {
-              // Chỉ auto scroll khi shouldScrollToEnd = true và không đang loading
-              if (shouldScrollToEnd && !isLoading) {
+              // Chỉ auto scroll khi shouldScrollToEnd = true
+              if (shouldScrollToEnd) {
+                // Sử dụng requestAnimationFrame để đảm bảo layout đã hoàn thành
                 requestAnimationFrame(() => {
-                  flatListRef.current?.scrollToEnd({ animated: false });
+                  if (flatListRef.current) {
+                    flatListRef.current.scrollToEnd({ animated: true });
+                  }
                 });
               }
             }}
-            onLayout={() => {
+            onLayout={(event) => {
               // Scroll to end khi component được layout lần đầu
               if (shouldScrollToEnd) {
-                setTimeout(() => {
-                  flatListRef.current?.scrollToEnd({ animated: false });
-                }, 50);
+                const { height } = event.nativeEvent.layout;
+                if (height > 0) { // Đảm bảo layout đã có kích thước
+                  setTimeout(() => {
+                    flatListRef.current?.scrollToEnd({ animated: false });
+                  }, 100);
+                }
               }
             }}
           />
@@ -340,32 +426,40 @@ const App = () => {
               <IconButton
                 icon="chevron-down"
                 size={24}
-                iconColor={theme.colors.primary}
+                iconColor={theme.colors.accent}
                 style={styles.scrollIcon}
               />
             </TouchableOpacity>
           )}
+        </View>
 
-          {/* Image Preview */}
-          <ImagePreview
-            imageUri={pickedImage}
-            onRemove={() => setPickedImage(null)}
-          />
+        {/* Bottom Input Container - Cố định ở dưới, không bị KeyboardAvoidingView ảnh hưởng */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        >
+          <View style={styles.bottomInputContainer}>
+            {/* Image Preview */}
+            <ImagePreview
+              imageUri={pickedImage}
+              onRemove={() => setPickedImage(null)}
+            />
 
-          {/* Chat Input */}
-          <ChatInput
-            inputText={inputText}
-            onChangeText={setInputText}
-            isLoading={isLoading}
-            // isRecording={isRecording}
-            onOpenCamera={openCamera}
-            onPickImage={pickImage}
-            // onStartRecording={startRecording}
-            // onStopRecording={stopRecording}
-            onSendMessage={handleSendMessage}
-            theme={theme}
-            canSend={canSendMessage}
-          />
+            {/* Chat Input */}
+            <ChatInput
+              inputText={inputText}
+              onChangeText={setInputText}
+              isLoading={isLoading}
+              // isRecording={isRecording}
+              onOpenCamera={openCamera}
+              onPickImage={pickImage}
+              // onStartRecording={startRecording}
+              // onStopRecording={stopRecording}
+              onSendMessage={handleSendMessage}
+              theme={theme}
+              canSend={canSendMessage}
+            />
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </PaperProvider>
@@ -375,19 +469,22 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa'
+    backgroundColor: '#FFFEF7' // Vàng rất nhạt, sáng hơn
   },
-  keyboardAvoidingContainer: {
-    flex: 1
+  mainContainer: {
+    flex: 1,
   },
   chatMessages: {
     flex: 1,
     paddingHorizontal: scale(10)
   },
+  bottomInputContainer: {
+    backgroundColor: '#FFFEF7',
+  },
   scrollToBottomButton: {
     position: 'absolute',
     right: scale(20),
-    bottom: verticalScale(80),
+    bottom: 0, // Sát luôn với thanh input
     backgroundColor: 'white',
     borderRadius: 25,
     elevation: 5,
@@ -398,6 +495,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    zIndex: 1000, // Đảm bảo nút luôn hiện trên cùng
   },
   scrollIcon: {
     margin: 0,

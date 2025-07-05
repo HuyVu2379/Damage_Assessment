@@ -1,7 +1,10 @@
 // --- API Keys (Sử dụng biến môi trường) ---
 // API keys được lưu trữ trong file .env (không được commit lên git)
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+import { GROQ_API_KEY, GEMINI_API_KEY } from '@env';
+
+// Import optimized logger
+const log = __DEV__ ? console.log : () => {};
+const error = __DEV__ ? console.error : () => {};
 
 const DAMAGE_ANALYSIS_PROMPT = `Tôi sẽ cung cấp hình ảnh một vị trí hư hại trong công trình xây dựng (nhà dân dụng hoặc công trình nhỏ).
 
@@ -190,7 +193,7 @@ export const getAiResponse = async (messageHistory, modelType, isDamageAnalysis 
         return aiMessage;
 
     } catch (error) {
-        console.error(`Lỗi khi gọi API ${modelType}:`, error);
+        error(`Lỗi khi gọi API ${modelType}:`, error);
         return `Xin lỗi, đã có lỗi xảy ra khi kết nối đến ${modelType}.`;
     }
 };
@@ -201,17 +204,14 @@ export const getAiResponse = async (messageHistory, modelType, isDamageAnalysis 
  * @returns {Object} Đối tượng chứa nội dung phân tích và danh sách sản phẩm
  */
 export const parseProductSuggestions = (aiResponse) => {
-    console.log('Đang parse sản phẩm từ phản hồi AI...');
-
+    // Loại bỏ tất cả console.log để giảm lag terminal
+    
     try {
         // Tìm JSON block trong phản hồi
         const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
 
         if (jsonMatch && jsonMatch[1]) {
-            console.log('Tìm thấy JSON block:', jsonMatch[1]);
-
             const productData = JSON.parse(jsonMatch[1]);
-            console.log('Dữ liệu sản phẩm đã parse:', productData);
 
             // Tách nội dung phân tích (loại bỏ JSON block)
             const analysisContent = aiResponse.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
@@ -221,13 +221,13 @@ export const parseProductSuggestions = (aiResponse) => {
                 products: productData.products || []
             };
 
-            console.log('Kết quả parse:', result);
             return result;
-        } else {
-            console.log('Không tìm thấy JSON block trong phản hồi');
         }
     } catch (error) {
-        console.error('Lỗi khi phân tích dữ liệu sản phẩm:', error);
+        // Chỉ log lỗi nghiêm trọng
+        if (__DEV__) {
+            error('Parse sản phẩm lỗi:', error.message);
+        }
     }
 
     // Nếu không có JSON hoặc lỗi, trả về phản hồi nguyên bản
@@ -243,10 +243,9 @@ export const parseProductSuggestions = (aiResponse) => {
  * @returns {Array} Danh sách sản phẩm đã được validate và format
  */
 export const validateProductData = (products) => {
-    console.log('Đang validate dữ liệu sản phẩm:', products);
-
+    // Loại bỏ console.log để giảm lag terminal
+    
     if (!Array.isArray(products)) {
-        console.log('Dữ liệu sản phẩm không phải là array');
         return [];
     }
 
@@ -260,7 +259,6 @@ export const validateProductData = (products) => {
         category: product.category || 'Khác'
     }));
 
-    console.log('Sản phẩm đã validate:', validatedProducts);
     return validatedProducts;
 };
 

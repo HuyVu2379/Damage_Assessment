@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
+import { theme } from '../utils/theme';
 import ProductSuggestions from './ProductSuggestions';
 
-const MessageItem = ({ item }) => {
+const MessageItem = ({ item, index }) => {
     if (item.role === 'system') return null;
 
     const isUserMessage = item.role === 'user';
@@ -24,7 +25,7 @@ const MessageItem = ({ item }) => {
                 {item.imageUri && (
                     <Image source={{ uri: item.imageUri }} style={styles.messageImage} />
                 )}
-                {item.content.length > 0 && (
+                {item.content && item.content.length > 0 && (
                     <Text style={isUserMessage ? styles.userMessageText : styles.aiMessageText}>
                         {item.content}
                     </Text>
@@ -64,22 +65,26 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     userMessageBubble: {
-        backgroundColor: '#4a6fa5'
+        backgroundColor: theme.colors.userBubble,
+        borderWidth: 1,
+        borderColor: '#E6C200', // Viền vàng đậm hơn
     },
     aiMessageBubble: {
-        backgroundColor: '#E5E5EA'
+        backgroundColor: theme.colors.aiBubble,
+        borderWidth: 1,
+        borderColor: '#E0E0E0', // Viền xám nhạt
     },
     messageBubbleWithProducts: {
         paddingVertical: verticalScale(10),
         paddingHorizontal: scale(8),
     },
     userMessageText: {
-        color: '#ffffff',
+        color: theme.colors.userText,
         fontSize: moderateScale(15),
         lineHeight: moderateScale(20),
     },
     aiMessageText: {
-        color: '#000000',
+        color: theme.colors.aiText,
         fontSize: moderateScale(15),
         lineHeight: moderateScale(20),
     },
@@ -96,4 +101,15 @@ const styles = StyleSheet.create({
     },
 });
 
-export default MessageItem;
+// Comparison function để tối ưu memo
+const areEqual = (prevProps, nextProps) => {
+    return (
+        prevProps.item.role === nextProps.item.role &&
+        prevProps.item.content === nextProps.item.content &&
+        prevProps.item.imageUri === nextProps.item.imageUri &&
+        prevProps.index === nextProps.index &&
+        JSON.stringify(prevProps.item.products) === JSON.stringify(nextProps.item.products)
+    );
+};
+
+export default memo(MessageItem, areEqual);
