@@ -37,11 +37,11 @@ import { chatStorage } from './services/chatStorage';
 
 const App = () => {
   const [messages, setMessages] = useState([
-    { role: 'system', content: 'Chào bạn, hãy chọn model và bắt đầu!' },
+    { role: 'system', content: 'Chào bạn! Tôi là chuyên gia xây dựng AI. Gửi ảnh hoặc câu hỏi, tôi sẽ tự động nhận diện và tư vấn phù hợp!' },
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('groq');
+  const [selectedModel, setSelectedModel] = useState('gemini'); // Mặc định là gemini
   const [pickedImage, setPickedImage] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [chatHistoryVisible, setChatHistoryVisible] = useState(false);
@@ -103,7 +103,7 @@ const App = () => {
 
   // Bắt đầu cuộc trò chuyện mới
   const startNewChat = () => {
-    setMessages([{ role: 'system', content: 'Chào bạn, hãy chọn model và bắt đầu!' }]);
+    setMessages([{ role: 'system', content: 'Chào bạn! Tôi là chuyên gia xây dựng AI. Gửi ảnh hoặc câu hỏi, tôi sẽ tự động nhận diện và tư vấn phù hợp!' }]);
     setInputText('');
     setPickedImage(null);
     setShouldScrollToEnd(true);
@@ -136,8 +136,10 @@ const App = () => {
     setShouldScrollToEnd(true);
 
     let messageContent = inputText.trim();
-    if (pickedImage) {
+    if (pickedImage && messageContent) {
       messageContent = `[Đã gửi 1 ảnh] ${messageContent}`;
+    } else if (pickedImage) {
+      messageContent = `[Đã gửi 1 ảnh]`;
     }
 
     const userMessage = {
@@ -148,28 +150,52 @@ const App = () => {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
 
-    // Lưu trạng thái có ảnh để quyết định loại prompt
+    // Lưu trạng thái có ảnh - AI sẽ tự động nhận diện và phản hồi phù hợp
     const hasImage = !!pickedImage;
 
     setInputText('');
     setPickedImage(null);
     setIsLoading(true);
 
-    const apiPayload = newMessages
-      .filter(msg => msg.role !== 'system')
-      .map(msg => ({ role: msg.role, content: msg.content }));
+    let aiResponseContent;
+    
+    // Tự động chọn model: có ảnh dùng gemini-vision, không có ảnh dùng gemini text
+    if (hasImage) {
+      // Có ảnh: Luôn dùng gemini-vision với prompt thông minh
+      const { convertImageToBase64 } = await import('./services/api');
+      
+      try {
+        const base64Image = await convertImageToBase64(pickedImage);
+        // AI sẽ tự động nhận diện và phản hồi phù hợp
+        aiResponseContent = await getAiResponse([], 'gemini-vision', true, base64Image);
+      } catch (error) {
+        console.error('Lỗi xử lý ảnh:', error);
+        aiResponseContent = 'Xin lỗi, có lỗi xảy ra khi xử lý ảnh. Bạn có thể thử lại không?';
+      }
+    } else {
+      // Không có ảnh: Dùng gemini text model cho chat thường
+      const apiPayload = newMessages
+        .filter(msg => msg.role !== 'system')
+        .map(msg => ({ role: msg.role, content: msg.content }));
+      
+      aiResponseContent = await getAiResponse(apiPayload, 'gemini', false);
+    }
 
-    // Truyền tham số isDamageAnalysis dựa trên việc có ảnh hay không
-    const aiResponseContent = await getAiResponse(apiPayload, selectedModel, hasImage);
-
-    // Parse sản phẩm nếu là phân tích hư hỏng
+    // Parse sản phẩm nếu AI phát hiện cần gợi ý sản phẩm
     let aiResponseMessage;
     if (hasImage) {
-      console.log('Đang parse phản hồi AI cho phân tích hư hỏng...');
+      // Với ảnh, AI có thể tự động gợi ý sản phẩm nếu phát hiện hư hỏng
+      console.log('Đang parse phản hồi AI cho ảnh...');
+      console.log('AI Response Content:', aiResponseContent);
+      
       const parsedResponse = parseProductSuggestions(aiResponseContent);
+      console.log('Parsed Response:', parsedResponse);
+      
       const validatedProducts = validateProductData(parsedResponse.products);
 
       console.log('Tạo tin nhắn AI với sản phẩm:', validatedProducts);
+      console.log('Analysis content:', parsedResponse.analysis);
+      
       aiResponseMessage = {
         role: 'assistant',
         content: parsedResponse.analysis,
@@ -275,28 +301,21 @@ const App = () => {
           theme={theme}
         />
 
-        {/* Model Selection Modal */}
-        <ModelSelectionModal
+        {/* Model Selection Modal - Tạm thời ẩn */}
+        {/* <ModelSelectionModal
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           onSelectModel={selectModel}
           selectedModel={selectedModel}
-        />
+        /> */}
 
         {/* Header */}
         <Header
-          selectedModel={selectedModel}
-          onOpenModal={() => setModalVisible(true)}
-          onOpenChatHistory={() => setChatHistoryVisible(true)}
           onNewChat={() => setSidebarVisible(true)}
           theme={theme}
         />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidingContainer}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        >
+        <View style={styles.mainContainer}>
           <FlatList
             ref={flatListRef}
             data={messages}
@@ -340,32 +359,40 @@ const App = () => {
               <IconButton
                 icon="chevron-down"
                 size={24}
-                iconColor={theme.colors.primary}
+                iconColor={theme.colors.accent}
                 style={styles.scrollIcon}
               />
             </TouchableOpacity>
           )}
+        </View>
 
-          {/* Image Preview */}
-          <ImagePreview
-            imageUri={pickedImage}
-            onRemove={() => setPickedImage(null)}
-          />
+        {/* Bottom Input Container - Cố định ở dưới, không bị KeyboardAvoidingView ảnh hưởng */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        >
+          <View style={styles.bottomInputContainer}>
+            {/* Image Preview */}
+            <ImagePreview
+              imageUri={pickedImage}
+              onRemove={() => setPickedImage(null)}
+            />
 
-          {/* Chat Input */}
-          <ChatInput
-            inputText={inputText}
-            onChangeText={setInputText}
-            isLoading={isLoading}
-            // isRecording={isRecording}
-            onOpenCamera={openCamera}
-            onPickImage={pickImage}
-            // onStartRecording={startRecording}
-            // onStopRecording={stopRecording}
-            onSendMessage={handleSendMessage}
-            theme={theme}
-            canSend={canSendMessage}
-          />
+            {/* Chat Input */}
+            <ChatInput
+              inputText={inputText}
+              onChangeText={setInputText}
+              isLoading={isLoading}
+              // isRecording={isRecording}
+              onOpenCamera={openCamera}
+              onPickImage={pickImage}
+              // onStartRecording={startRecording}
+              // onStopRecording={stopRecording}
+              onSendMessage={handleSendMessage}
+              theme={theme}
+              canSend={canSendMessage}
+            />
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </PaperProvider>
@@ -375,19 +402,22 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa'
+    backgroundColor: '#FFFEF7' // Vàng rất nhạt, sáng hơn
   },
-  keyboardAvoidingContainer: {
-    flex: 1
+  mainContainer: {
+    flex: 1,
   },
   chatMessages: {
     flex: 1,
     paddingHorizontal: scale(10)
   },
+  bottomInputContainer: {
+    backgroundColor: '#FFFEF7',
+  },
   scrollToBottomButton: {
     position: 'absolute',
     right: scale(20),
-    bottom: verticalScale(80),
+    bottom: 0, // Sát luôn với thanh input
     backgroundColor: 'white',
     borderRadius: 25,
     elevation: 5,
@@ -398,6 +428,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    zIndex: 1000, // Đảm bảo nút luôn hiện trên cùng
   },
   scrollIcon: {
     margin: 0,

@@ -12,8 +12,8 @@ const ImagePreview = ({ imageUri, onRemove }) => {
             <TouchableOpacity style={styles.removeImageButton} onPress={onRemove}>
                 <IconButton
                     icon="close-circle"
-                    size={moderateScale(24)}
-                    color="rgba(0,0,0,0.7)"
+                    size={moderateScale(20)}
+                    iconColor="rgba(220,20,60,0.8)"
                 />
             </TouchableOpacity>
         </View>
@@ -22,20 +22,24 @@ const ImagePreview = ({ imageUri, onRemove }) => {
 
 const styles = StyleSheet.create({
     previewContainer: {
-        padding: moderateScale(10),
-        backgroundColor: '#f0f0f0',
-        borderTopWidth: 1,
-        borderColor: '#ddd'
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: moderateScale(15),
+        paddingVertical: moderateScale(8),
+        backgroundColor: '#FFFEF7', // Cùng màu nền app
+        marginBottom: moderateScale(5), // Tạo khoảng cách với input
     },
     previewImage: {
-        width: scale(80),
-        height: scale(80),
-        borderRadius: moderateScale(8)
+        width: scale(60),
+        height: scale(60),
+        borderRadius: moderateScale(8),
+        borderWidth: 1,
+        borderColor: '#E8E8E8'
     },
     removeImageButton: {
-        position: 'absolute',
-        top: 0,
-        right: 0
+        marginLeft: moderateScale(8),
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        borderRadius: moderateScale(12),
     },
 });
 
