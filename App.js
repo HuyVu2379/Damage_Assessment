@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   scrollToBottomButton: {
     position: 'absolute',
     right: scale(20),
-    bottom: verticalScale(100), // Tăng khoảng cách để không bị che bởi input và ảnh
+    bottom: 0, // Sát luôn với thanh input
     backgroundColor: 'white',
     borderRadius: 25,
     elevation: 5,
