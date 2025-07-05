@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { IconButton } from 'react-native-paper';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 
-const Header = ({ onNewChat, isDamageMode, onToggleDamageMode, theme }) => {
+const Header = ({ onNewChat, theme }) => {
     return (
         <View style={styles.header}>
             <View style={styles.leftActions}>
@@ -16,20 +16,11 @@ const Header = ({ onNewChat, isDamageMode, onToggleDamageMode, theme }) => {
             </View>
 
             <View style={styles.centerActions}>
-                {/* Khu vực giữa để trống hoặc có thể thêm title */}
+                <Text style={styles.title}>🏗️ AI Xây Dựng</Text>
             </View>
 
             <View style={styles.rightActions}>
-                <IconButton
-                    icon={isDamageMode ? "hammer-wrench" : "chat"}
-                    size={20}
-                    onPress={onToggleDamageMode}
-                    style={[
-                        styles.toggleButton,
-                        isDamageMode && styles.toggleButtonActive
-                    ]}
-                    iconColor={isDamageMode ? '#fff' : theme.colors.primary}
-                />
+                {/* Có thể thêm icon history hoặc setting sau */}
             </View>
         </View>
     );
@@ -57,19 +48,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    title: {
+        fontSize: moderateScale(16),
+        fontWeight: 'bold',
+        color: '#333',
+    },
     rightActions: {
         flexDirection: 'row',
         alignItems: 'center',
         width: scale(60),
         justifyContent: 'flex-end',
-    },
-    toggleButton: {
-        margin: 0,
-        borderRadius: moderateScale(20),
-        backgroundColor: 'transparent',
-    },
-    toggleButtonActive: {
-        backgroundColor: '#FF6B35',
     },
     iconButton: {
         margin: 0,

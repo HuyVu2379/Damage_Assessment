@@ -37,7 +37,7 @@ import { chatStorage } from './services/chatStorage';
 
 const App = () => {
   const [messages, setMessages] = useState([
-    { role: 'system', content: 'Chào bạn! Bạn có thể chat thường hoặc bật chế độ phân tích hư hỏng công trình.' },
+    { role: 'system', content: 'Chào bạn! Tôi là chuyên gia xây dựng AI. Gửi ảnh hoặc câu hỏi, tôi sẽ tự động nhận diện và tư vấn phù hợp!' },
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +47,6 @@ const App = () => {
   const [chatHistoryVisible, setChatHistoryVisible] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [shouldScrollToEnd, setShouldScrollToEnd] = useState(true);
-  const [isDamageMode, setIsDamageMode] = useState(false); // State cho chế độ phân tích hư hỏng
 
   const flatListRef = useRef(null);
   const previousMessagesLength = useRef(messages.length);
@@ -104,10 +103,9 @@ const App = () => {
 
   // Bắt đầu cuộc trò chuyện mới
   const startNewChat = () => {
-    setMessages([{ role: 'system', content: 'Chào bạn! Bạn có thể chat thường hoặc bật chế độ phân tích hư hỏng công trình.' }]);
+    setMessages([{ role: 'system', content: 'Chào bạn! Tôi là chuyên gia xây dựng AI. Gửi ảnh hoặc câu hỏi, tôi sẽ tự động nhận diện và tư vấn phù hợp!' }]);
     setInputText('');
     setPickedImage(null);
-    setIsDamageMode(false); // Reset về chế độ chat thường
     setShouldScrollToEnd(true);
   };
 
@@ -127,22 +125,6 @@ const App = () => {
   const selectModel = (model) => {
     setSelectedModel(model);
     setModalVisible(false);
-  };
-
-  // Handler cho toggle damage mode
-  const toggleDamageMode = () => {
-    const newMode = !isDamageMode;
-    setIsDamageMode(newMode);
-    
-    // Thêm thông báo ngắn gọn về chế độ hiện tại
-    const modeMessage = newMode 
-      ? "🔧 Chế độ phân tích hư hỏng: Gửi ảnh công trình để đánh giá tình trạng"
-      : "💬 Chế độ chat thường: Trao đổi về xây dựng và kiến trúc";
-    
-    setMessages(prev => [...prev, { 
-      role: 'system', 
-      content: modeMessage 
-    }]);
   };
 
   const handleSendMessage = async () => {
@@ -166,9 +148,8 @@ const App = () => {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
 
-    // Lưu trạng thái có ảnh và chế độ phân tích
+    // Lưu trạng thái có ảnh - AI sẽ tự động nhận diện và phản hồi phù hợp
     const hasImage = !!pickedImage;
-    const shouldUseDamageAnalysis = isDamageMode && hasImage; // Chỉ phân tích hư hỏng khi bật chế độ VÀ có ảnh
 
     setInputText('');
     setPickedImage(null);
@@ -176,17 +157,18 @@ const App = () => {
 
     let aiResponseContent;
     
-    // Tự động chọn model dựa trên chế độ và có ảnh hay không
+    // Tự động chọn model: có ảnh dùng gemini-vision, không có ảnh dùng gemini text
     if (hasImage) {
-      // Có ảnh: Luôn dùng gemini-vision
+      // Có ảnh: Luôn dùng gemini-vision với prompt thông minh
       const { convertImageToBase64 } = await import('./services/api');
       
       try {
         const base64Image = await convertImageToBase64(pickedImage);
-        aiResponseContent = await getAiResponse([], 'gemini-vision', shouldUseDamageAnalysis, base64Image);
+        // AI sẽ tự động nhận diện và phản hồi phù hợp
+        aiResponseContent = await getAiResponse([], 'gemini-vision', true, base64Image);
       } catch (error) {
         console.error('Lỗi xử lý ảnh:', error);
-        aiResponseContent = 'Xin lỗi, có lỗi xảy ra khi xử lý ảnh.';
+        aiResponseContent = 'Xin lỗi, có lỗi xảy ra khi xử lý ảnh. Bạn có thể thử lại không?';
       }
     } else {
       // Không có ảnh: Dùng gemini text model cho chat thường
@@ -197,10 +179,11 @@ const App = () => {
       aiResponseContent = await getAiResponse(apiPayload, 'gemini', false);
     }
 
-    // Parse sản phẩm nếu là phân tích hư hỏng
+    // Parse sản phẩm nếu AI phát hiện cần gợi ý sản phẩm
     let aiResponseMessage;
-    if (shouldUseDamageAnalysis) {
-      console.log('Đang parse phản hồi AI cho phân tích hư hỏng...');
+    if (hasImage) {
+      // Với ảnh, AI có thể tự động gợi ý sản phẩm nếu phát hiện hư hỏng
+      console.log('Đang parse phản hồi AI cho ảnh...');
       const parsedResponse = parseProductSuggestions(aiResponseContent);
       const validatedProducts = validateProductData(parsedResponse.products);
 
@@ -321,8 +304,6 @@ const App = () => {
         {/* Header */}
         <Header
           onNewChat={() => setSidebarVisible(true)}
-          isDamageMode={isDamageMode}
-          onToggleDamageMode={toggleDamageMode}
           theme={theme}
         />
 
