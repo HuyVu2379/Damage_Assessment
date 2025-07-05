@@ -38,6 +38,7 @@ const error = __DEV__ ? console.error : () => {};
 
 // API
 import { getAiResponse, parseProductSuggestions, validateProductData } from './services/api';
+import { getAiResponse as getAiResponseWithImage } from './services/api_new';
 import { chatStorage } from './services/chatStorage';
 
 const App = () => {
@@ -105,7 +106,20 @@ const App = () => {
     const lastMessages = await chatStorage.loadCurrentChat();
     if (lastMessages && lastMessages.length > 1) {
       setMessages(lastMessages);
-      // Đảm bảo scroll to bottom sau khi load
+      setShouldScrollToEnd(true);
+      // Đảm bảo scroll to bottom sau khi load với nhiều lần thử
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 500);
+    } else {
+      // Nếu không có tin nhắn cũ, đảm bảo scroll cho tin nhắn hệ thống
+      setShouldScrollToEnd(true);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: false });
       }, 200);
@@ -126,10 +140,13 @@ const App = () => {
     setInputText('');
     setPickedImage(null);
     setShouldScrollToEnd(true);
-    // Scroll to bottom sau khi load conversation
+    // Scroll to bottom sau khi load conversation với retry
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: false });
-    }, 200);
+    }, 100);
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 300);
   };
 
   // Handlers
@@ -173,15 +190,30 @@ const App = () => {
     // Tự động chọn model: có ảnh dùng gemini-vision, không có ảnh dùng gemini text
     if (hasImage) {
       // Có ảnh: Luôn dùng gemini-vision với prompt thông minh
-      const { convertImageToBase64 } = await import('./services/api');
-      
       try {
+        // Dynamically import để tránh blocking
+        const { convertImageToBase64 } = await import('./services/api_new');
+        
         const base64Image = await convertImageToBase64(pickedImage);
-        // AI sẽ tự động nhận diện và phản hồi phù hợp
-        aiResponseContent = await getAiResponse([], 'gemini-vision', true, base64Image);
+        
+        // Timeout để tránh bị treo
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout after 30 seconds')), 30000)
+        );
+        
+        aiResponseContent = await Promise.race([
+          getAiResponseWithImage([], 'gemini-vision', true, base64Image),
+          timeoutPromise
+        ]);
       } catch (error) {
         error('Lỗi xử lý ảnh:', error);
-        aiResponseContent = 'Xin lỗi, có lỗi xảy ra khi xử lý ảnh. Bạn có thể thử lại không?';
+        setIsLoading(false);
+        Alert.alert(
+          'Lỗi xử lý ảnh', 
+          'Không thể phân tích ảnh. Vui lòng thử lại hoặc gửi tin nhắn text.',
+          [{ text: 'OK', onPress: () => {} }]
+        );
+        return; // Dừng execution nếu có lỗi
       }
     } else {
       // Không có ảnh: Dùng gemini text model cho chat thường
@@ -247,44 +279,31 @@ const App = () => {
       item={item} 
       index={index}
     />
-  ), []);
+  ), []); // Empty deps array vì MessageItem đã được memo với custom comparison
 
   // Optimize keyExtractor
   const keyExtractor = useCallback((item, index) => {
     return `message-${index}-${item.role}`;
   }, []);
 
-  // Optimize getItemLayout nếu messages có height cố định
-  const getItemLayout = useCallback((data, index) => {
-    const ESTIMATED_ITEM_HEIGHT = 120; // Ước tính height cho mỗi message
-    return {
-      length: ESTIMATED_ITEM_HEIGHT,
-      offset: ESTIMATED_ITEM_HEIGHT * index,
-      index,
-    };
-  }, []);
-
   const canSendMessage = inputText.trim().length > 0 || pickedImage;
 
-  // Hàm scroll to end thủ công - FIX
+  // Hàm scroll to end thủ công - FIX cải tiến
   const scrollToEnd = useCallback(() => {
-    // Thực hiện scroll ngay lập tức với nhiều phương pháp để đảm bảo hoạt động
-    if (flatListRef.current) {
-      // Phương pháp 1: scrollToEnd trực tiếp
+    // Kiểm tra ref có tồn tại không
+    if (!flatListRef.current) return;
+    
+    try {
+      // Phương pháp đơn giản và ổn định nhất
       flatListRef.current.scrollToEnd({ animated: true });
       
-      // Phương pháp 2: scrollToOffset với giá trị lớn (backup)
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ 
-          offset: 999999, 
-          animated: true 
-        });
-      }, 50);
-      
-      // Chỉ set state sau khi scroll hoàn thành để tránh button biến mất quá sớm
+      // Set state sau một delay ngắn để tránh conflict
       setTimeout(() => {
         setShouldScrollToEnd(true);
-      }, 400); // Đợi animation scroll hoàn thành
+      }, 300);
+    } catch (error) {
+      // Fallback nếu có lỗi
+      console.warn('Scroll error:', error);
     }
   }, []);
 
@@ -360,32 +379,39 @@ const App = () => {
             contentContainerStyle={{ paddingVertical: verticalScale(10) }}
             ListFooterComponent={isLoading ? <LoadingIndicator theme={theme} /> : null}
             onScroll={handleScroll}
-            scrollEventThrottle={100}
+            scrollEventThrottle={200} // Tăng từ 100 lên 200 để giảm tần suất event
             
-            // Performance optimizations
+            // Performance optimizations - Tối ưu cho list lớn
             removeClippedSubviews={true}
-            initialNumToRender={8}
-            maxToRenderPerBatch={5}
-            windowSize={10}
-            updateCellsBatchingPeriod={50}
-            getItemLayout={getItemLayout}
+            initialNumToRender={4} // Giảm xuống 4 để tăng performance
+            maxToRenderPerBatch={2} // Giảm xuống 2
+            windowSize={6} // Giảm xuống 6
+            updateCellsBatchingPeriod={200} // Tăng lên 200ms để giảm tần suất update
+            getItemLayout={undefined} // Tắt getItemLayout để tránh conflict
+            legacyImplementation={false}
+            disableVirtualization={false} // Đảm bảo virtualization được bật
             
-            // Scroll optimization
+            // Scroll optimization - Cải tiến
             onContentSizeChange={(contentWidth, contentHeight) => {
               // Chỉ auto scroll khi shouldScrollToEnd = true
               if (shouldScrollToEnd) {
                 // Sử dụng requestAnimationFrame để đảm bảo layout đã hoàn thành
                 requestAnimationFrame(() => {
-                  flatListRef.current?.scrollToEnd({ animated: true });
+                  if (flatListRef.current) {
+                    flatListRef.current.scrollToEnd({ animated: true });
+                  }
                 });
               }
             }}
-            onLayout={() => {
+            onLayout={(event) => {
               // Scroll to end khi component được layout lần đầu
               if (shouldScrollToEnd) {
-                setTimeout(() => {
-                  flatListRef.current?.scrollToEnd({ animated: false });
-                }, 50);
+                const { height } = event.nativeEvent.layout;
+                if (height > 0) { // Đảm bảo layout đã có kích thước
+                  setTimeout(() => {
+                    flatListRef.current?.scrollToEnd({ animated: false });
+                  }, 100);
+                }
               }
             }}
           />

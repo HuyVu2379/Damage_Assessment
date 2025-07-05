@@ -4,7 +4,7 @@ import { moderateScale, verticalScale, scale } from '../utils/scaling';
 import { theme } from '../utils/theme';
 import ProductSuggestions from './ProductSuggestions';
 
-const MessageItem = memo(({ item, index }) => {
+const MessageItem = ({ item, index }) => {
     if (item.role === 'system') return null;
 
     const isUserMessage = item.role === 'user';
@@ -40,7 +40,7 @@ const MessageItem = memo(({ item, index }) => {
             </View>
         </View>
     );
-});
+};
 
 const styles = StyleSheet.create({
     messageContainer: {
@@ -101,4 +101,15 @@ const styles = StyleSheet.create({
     },
 });
 
-export default MessageItem;
+// Comparison function để tối ưu memo
+const areEqual = (prevProps, nextProps) => {
+    return (
+        prevProps.item.role === nextProps.item.role &&
+        prevProps.item.content === nextProps.item.content &&
+        prevProps.item.imageUri === nextProps.item.imageUri &&
+        prevProps.index === nextProps.index &&
+        JSON.stringify(prevProps.item.products) === JSON.stringify(nextProps.item.products)
+    );
+};
+
+export default memo(MessageItem, areEqual);
