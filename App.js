@@ -38,7 +38,7 @@ const error = __DEV__ ? console.error : () => {};
 
 // API
 import { getAiResponse, parseProductSuggestions, validateProductData } from './services/api';
-import { getAiResponse as getAiResponseWithImage } from './services/api_new';
+import { getAiResponse as getAiResponseWithImage } from './services/api';
 import { chatStorage } from './services/chatStorage';
 
 const App = () => {
