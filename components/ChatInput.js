@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, TextInput as RNTextInput } from 'react-native';
 import { TextInput, IconButton, ActivityIndicator } from 'react-native-paper';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 
@@ -55,7 +55,7 @@ const ChatInput = ({
                 </>
             )}
             
-            <TextInput
+            <RNTextInput
                 style={[
                     styles.textInput, 
                     { fontSize: moderateScale(14), flex: 1 },
@@ -63,21 +63,14 @@ const ChatInput = ({
                 ]}
                 value={inputText}
                 onChangeText={onChangeText}
-                placeholder={isCompact ? "Nhập tin nhắn..." : "Nhập tin nhắn hoặc thu âm..."}
+                placeholder={isCompact ? "Aa" : "Aa"}
                 placeholderTextColor={theme.colors.placeholder}
-                dense
-                disabled={isLoading}
+                editable={!isLoading}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
-                theme={{ 
-                    ...theme, 
-                    colors: { 
-                        ...theme.colors,
-                        text: theme.colors.text,
-                        primary: theme.colors.iconPrimary,
-                        outline: 'transparent'
-                    } 
-                }}
+                multiline={false}
+                textAlign="left"
+                textAlignVertical="center"
             />
 
             {!isCompact && !canSend && (
@@ -125,16 +118,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: scale(8),
         paddingVertical: verticalScale(8),
         backgroundColor: '#FFFEF7', // Cùng màu với app background
-        borderTopColor: '#E8E8E8',
-        borderTopWidth: 1,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: -1,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
         minHeight: verticalScale(55),
     },
     chatInputContainerCompact: {
@@ -145,18 +128,29 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#FFFFFF',
         marginHorizontal: scale(2),
-        borderRadius: moderateScale(8),
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderRadius: moderateScale(20), // Thay đổi từ 8 thành 20 để tròn như compact
+        borderWidth: 0,
         paddingHorizontal: scale(12),
+        paddingVertical: scale(8), // Giảm padding để căn giữa tốt hơn
         minHeight: verticalScale(38),
+        // Tạo độ sâu với shadow nhẹ
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
     },
     textInputCompact: {
-        backgroundColor: '#F0F2F5',
+        backgroundColor: '#FFFFFF', // Đồng bộ màu nền
         borderRadius: moderateScale(20),
-        borderWidth: 0,
         marginHorizontal: scale(4),
+        paddingVertical: scale(6), // Giảm padding dọc cho compact
         minHeight: verticalScale(36),
+        elevation: 2, // Đồng bộ elevation
+        shadowOpacity: 0.08, // Đồng bộ shadow
     },
     actionButton: {
         margin: 0,

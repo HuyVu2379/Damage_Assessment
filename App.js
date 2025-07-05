@@ -315,11 +315,7 @@ const App = () => {
           theme={theme}
         />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.keyboardAvoidingContainer}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-        >
+        <View style={styles.mainContainer}>
           <FlatList
             ref={flatListRef}
             data={messages}
@@ -368,8 +364,13 @@ const App = () => {
               />
             </TouchableOpacity>
           )}
+        </View>
 
-          {/* Bottom Input Container - Chứa cả ImagePreview và ChatInput */}
+        {/* Bottom Input Container - Cố định ở dưới, không bị KeyboardAvoidingView ảnh hưởng */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        >
           <View style={styles.bottomInputContainer}>
             {/* Image Preview */}
             <ImagePreview
@@ -403,8 +404,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFEF7' // Vàng rất nhạt, sáng hơn
   },
-  keyboardAvoidingContainer: {
-    flex: 1
+  mainContainer: {
+    flex: 1,
   },
   chatMessages: {
     flex: 1,

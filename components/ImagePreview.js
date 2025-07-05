@@ -27,8 +27,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: moderateScale(15),
         paddingVertical: moderateScale(8),
         backgroundColor: '#FFFEF7', // Cùng màu nền app
-        borderTopWidth: 1,
-        borderColor: '#E8E8E8',
         marginBottom: moderateScale(5), // Tạo khoảng cách với input
     },
     previewImage: {
