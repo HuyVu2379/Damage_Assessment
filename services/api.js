@@ -260,6 +260,239 @@ export const searchRealProducts = async (query) => {
 const serpCache = new Map();
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 giờ
 
+/**
+ * Tối ưu hóa từ khóa tìm kiếm cho lĩnh vực xây dựng
+ * @param {string} productName Tên sản phẩm gốc
+ * @returns {string} Từ khóa tìm kiếm được tối ưu
+ */
+const optimizeConstructionSearchQuery = (productName) => {
+  console.log(`🔍 [QUERY] Optimizing: "${productName}"`);
+  
+  // Mapping từ khóa với thương hiệu và model cụ thể - tập trung vào vật liệu thực
+  const constructionKeywordMap = {
+    'keo': 'keo dán vật liệu xây nhà sikaflex sika',
+    'trám': 'keo trám khe chống thấm xây nhà sika',
+    'sơn': 'sơn chống thấm tường nhà dulux nippon jotun',
+    'xi măng': 'xi măng portland xây nhà holcim lafarge',
+    'gạch': 'gạch ốp lát ceramic granite xây nhà viglacera',
+    'thép': 'thép xây nhà việt đức hòa phát pomina',
+    'đá': 'đá granite marble vật liệu xây nhà',
+    'cát': 'cát vật liệu xây nhà',
+    'sỏi': 'sỏi đá vật liệu xây nhà',
+    'đinh': 'đinh thép công cụ xây nhà',
+    'vít': 'vít ốc thép công cụ xây nhà',
+    'ống': 'ống nước pvc xây nhà tiền phong',
+    'dây': 'dây cáp điện xây nhà cadivi',
+    'kính': 'kính cường lực xây nhà asahi',
+    'nhôm': 'nhôm định hình xây nhà minh long',
+    'inox': 'inox 304 tấm ống xây nhà'
+  };
+
+  let optimizedQuery = productName.toLowerCase().trim();
+
+  // Loại bỏ các từ khóa nguy hiểm có thể dẫn đến sách/tài liệu
+  const dangerousWords = [
+    'sách', 'giáo trình', 'tài liệu', 'học', 'đọc', 'viết', 'combo', 'set',
+    'khóa học', 'bài giảng', 'hướng dẫn', 'cẩm nang', 'sổ tay', 'ebook',
+    'pdf', 'word', 'hợp đồng', 'biểu mẫu', 'phiếu', 'đơn', 'giấy tờ',
+    'chứng từ', 'văn bản', 'quy trình', 'tiêu chuẩn', 'quy định'
+  ];
+
+  // Loại bỏ từ nguy hiểm trước
+  dangerousWords.forEach(word => {
+    optimizedQuery = optimizedQuery.replace(new RegExp(`\\b${word}\\b`, 'gi'), '');
+  });
+
+  // Tìm từ khóa xây dựng chính và thay thế bằng query cụ thể
+  let matched = false;
+  Object.keys(constructionKeywordMap).forEach(keyword => {
+    if (optimizedQuery.includes(keyword) && !matched) {
+      optimizedQuery = constructionKeywordMap[keyword];
+      matched = true;
+    }
+  });
+
+  // Nếu không match được từ khóa nào, thêm context rất cụ thể về vật liệu xây nhà
+  if (!matched) {
+    optimizedQuery = `${optimizedQuery.trim()} vật liệu xây nhà công cụ xây nhà hardware`.replace(/\s+/g, ' ').trim();
+  }
+
+  // Thêm từ khóa loại trừ để tránh sách/tài liệu/hợp đồng
+  optimizedQuery += ' -sách -giáo_trình -tài_liệu -hợp_đồng -phiếu -định_mức -dự_toán -báo_giá';
+
+  console.log(`🎯 [QUERY] Optimized to: "${optimizedQuery}"`);
+  return optimizedQuery;
+};
+
+/**
+ * Kiểm tra xem sản phẩm có liên quan đến xây dựng không
+ * @param {string} title Tiêu đề sản phẩm
+ * @param {string} snippet Mô tả sản phẩm
+ * @param {string} source Nguồn sản phẩm
+ * @returns {boolean} True nếu liên quan đến xây dựng
+ */
+const isConstructionRelatedProduct = (title = '', snippet = '', source = '') => {
+  const text = `${title} ${snippet} ${source}`.toLowerCase();
+  
+  console.log(`🔍 [FILTER] Checking: "${title.substring(0, 80)}..."`);
+  
+  // Keywords LOẠI BỎ NGAY (mở rộng và chặt chẽ hơn)
+  const strictExcludeKeywords = [
+    // Thực phẩm và đồ uống
+    'kim chi', 'cải thảo', 'thực phẩm', 'ăn uống', 'đồ ăn', 'nước uống', 'thức ăn',
+    'rau củ', 'trái cây', 'bánh kẹo', 'gia vị', 'nấu ăn', 'món ăn',
+    
+    // May vá và thời trang
+    'may vá', 'kim may', 'chỉ may', 'vải may', 'quần áo', 'thời trang',
+    'áo', 'quần', 'váy', 'giày dép', 'túi xách',
+    
+    // Trang sức
+    'kim cương trang sức', 'nhẫn', 'dây chuyền', 'bông tai', 'vòng tay',
+    'đồng hồ', 'trang sức', 'vàng bạc',
+    
+    // Y tế và làm đẹp
+    'thuốc', 'vitamin', 'thực phẩm chức năng', 'mỹ phẩm', 'làm đẹp',
+    'kem dưỡng', 'serum', 'toner', 'sữa rửa mặt',
+    
+    // Điện tử
+    'điện thoại', 'máy tính', 'laptop', 'game', 'đồ chơi', 'console',
+    'tv', 'tivi', 'máy ảnh', 'camera', 'tai nghe',
+    
+    // Xe cộ
+    'xe hơi', 'ô tô', 'xe máy', 'phụ tung xe', 'lốp xe', 'nhớt xe',
+    
+    // Sách và tài liệu
+    'sách', 'truyện', 'manga', 'tiểu thuyết', 'giáo trình', 'tài liệu',
+    'ebook', 'pdf', 'hướng dẫn học', 'cẩm nang học', 'bài giảng',
+    'khóa học', 'học online', 'course', 'tutorial',
+    
+    // Hợp đồng và giấy tờ  
+    'hợp đồng', 'phiếu', 'đơn', 'giấy tờ', 'chứng từ', 'văn bản',
+    'quy trình', 'tiêu chuẩn', 'quy định', 'biểu mẫu', 'mẫu đơn',
+    'phiếu nhập', 'phiếu xuất', 'hóa đơn', 'chứng từ kế toán',
+    
+    // Âm nhạc và giải trí
+    'âm nhạc', 'nhạc cụ', 'guitar', 'piano', 'karaoke', 'loa',
+    
+    // Thể thao
+    'thể thao', 'bóng đá', 'tennis', 'gym', 'tập luyện',
+    
+    // Thú cưng
+    'chăm sóc thú cưng', 'thức ăn chó', 'thức ăn mèo', 'chuồng',
+    
+    // Văn phòng phẩm
+    'văn phòng phẩm', 'bút', 'giấy a4', 'máy in', 'stapler',
+    'bút bi', 'bút chì', 'thước kẻ', 'tẩy', 'gôm',
+    
+    // Nấu ăn
+    'nồi chảo', 'bếp ga', 'lò vi sóng', 'tủ lạnh', 'máy xay',
+    
+    // Các từ khóa kỹ thuật gây nhầm lẫn
+    'kim mù lỗ', 'kim cương bằng thép cứng', 'chồn thực hành',
+    'nội dung đa nền tảng', 'phần mềm', 'ứng dụng', 'app', 'software',
+    
+    // Thêm các từ khóa mới để loại bỏ sách/tài liệu về "xây dựng" tổ chức
+    'combo sách', 'bộ sách', 'giảng viên', 'học viên', 'sinh viên',
+    'đại học', 'cao đẳng', 'trung cấp', 'lớp học', 'môn học',
+    'kiểm tra', 'thi cử', 'đề thi', 'bài tập', 'homework',
+    
+    // Loại bỏ các sách về "xây dựng" tổ chức/chính trị/xã hội
+    'xây dựng đảng', 'xây dựng tổ chức', 'xây dựng chính quyền',
+    'xây dựng nông thôn', 'xây dựng xã hội', 'xây dựng quê hương',
+    'xây dựng đoàn thể', 'xây dựng lòng tin', 'xây dựng mối quan hệ',
+    'xây dựng thương hiệu', 'xây dựng kế hoạch', 'xây dựng chiến lược',
+    'xây dựng nhân cách', 'xây dựng tính cách', 'xây dựng gia đình',
+    'xây dựng nhóm', 'xây dựng đội ngũ', 'xây dựng mô hình kinh doanh',
+    
+    // Từ khóa chỉ "định mức", "dự toán" mà không phải vật liệu thực
+    'định mức dự toán', 'dự toán công trình', 'báo giá xây dựng',
+    'hợp đồng xây dựng', 'quản lý dự án', 'giám sát thi công'
+  ];
+  
+  // Kiểm tra loại bỏ trước (strict) - nếu có bất kỳ từ nào thì loại
+  const hasStrictExclude = strictExcludeKeywords.some(keyword => text.includes(keyword));
+  if (hasStrictExclude) {
+    console.log(`❌ [FILTER] EXCLUDED: "${title.substring(0, 50)}..." - Contains exclude keyword`);
+    return false;
+  }
+  
+  // Keywords XÂY DỰNG chính xác - tập trung vào vật liệu và công cụ thực tế
+  const primaryConstructionKeywords = [
+    // Thay 'xây dựng' chung chung bằng các cụm từ cụ thể
+    'vật liệu xây dựng', 'vật liệu xây nhà', 'xây nhà', 'xây dựng nhà', 'xây dựng công trình',
+    'công trình xây dựng', 'kiến trúc xây dựng', 'thi công xây dựng', 'sửa chữa nhà',
+    
+    // Keo và chất dính
+    'keo xây dựng', 'keo trám', 'keo dán gạch', 'keo sikaflex', 'keo chống thấm',
+    'keo dán ngói', 'keo trám khe', 'keo silicon', 'keo pu foam',
+    
+    // Sơn và hoàn thiện
+    'sơn tường', 'sơn nhà', 'sơn chống thấm', 'sơn nippon', 'sơn jotun', 'sơn dulux', 'sơn kova',
+    'sơn nước', 'sơn dầu', 'sơn epoxy', 'sơn lót', 'sơn phủ',
+    
+    // Xi măng và bê tông
+    'xi măng', 'cement', 'bê tông', 'concrete', 'vữa xây', 'vữa trát',
+    'xi măng portland', 'bột trét tường', 'vữa khô',
+    
+    // Gạch và ngói
+    'gạch xây', 'gạch ốp lát', 'gạch men', 'ngói', 'ceramic', 'granite', 'marble',
+    'gạch block', 'gạch đỏ', 'gạch không nung', 'gạch ceramic', 'gạch porcelain',
+    
+    // Thép và kim loại
+    'thép xây dựng', 'thép việt', 'thép hòa phát', 'sắt thép', 'thép pomina',
+    'thép cây', 'thép hình', 'thép ống', 'inox xây dựng', 'nhôm xây dựng',
+    
+    // Cửa và khung
+    'cửa nhôm', 'cửa kính', 'cửa sắt', 'cửa gỗ', 'cửa cuốn', 'cửa chống cháy',
+    'khung cửa', 'khung nhôm', 'cửa sổ nhôm',
+    
+    // Ống và đường ống
+    'ống nước', 'ống thoát nước', 'ống nhựa pvc', 'ống inox', 'ống đồng',
+    'ống nước lạnh', 'ống nước nóng', 'ống thoát sàn',
+    
+    // Chống thấm và cách nhiệt
+    'chống thấm', 'cách âm', 'cách nhiệt', 'chống nóng', 'màng chống thấm',
+    'vật liệu cách nhiệt', 'tấm cách âm',
+    
+    // Máy móc và công cụ
+    'máy khoan', 'máy cắt', 'dụng cụ xây nhà', 'công cụ xây nhà',
+    'máy trộn bê tông', 'máy đầm', 'máy cắt gạch',
+    
+    // Thương hiệu uy tín
+    'viglacera', 'đồng tâm', 'toto', 'american standard', 'inax', 'caesar',
+    'holcim', 'lafarge', 'cadivi', 'minh long', 'asia', 'rang dong'
+  ];
+  
+  const secondaryConstructionKeywords = [
+    'tường', 'mái', 'sàn', 'trần', 'cột', 'dầm', 'móng', 'nền',
+    'lát', 'ốp', 'trám', 'sơn', 'quét vôi', 'tô trát',
+    'sửa chữa', 'cải tạo', 'hoàn thiện', 'trang trí nội thất',
+    'chịu lực', 'chống nứt', 'chống ẩm', 'chống mốc', 'chống nước',
+    'đinh', 'vít', 'bu lông', 'ốc vít', 'đinh tán',
+    'dây điện', 'cáp điện', 'ổ cắm', 'công tắc điện',
+    'kính cường lực', 'kính an toàn', 'kính hộp',
+    'nhôm định hình', 'inox 304', 'inox 201',
+    'cát xây dựng', 'sỏi', 'đá dăm', 'đá hộc'
+  ];
+  
+  // Đếm số từ khóa xây dựng (tăng cường yêu cầu)
+  const primaryMatches = primaryConstructionKeywords.filter(keyword => text.includes(keyword));
+  const secondaryMatches = secondaryConstructionKeywords.filter(keyword => text.includes(keyword));
+  
+  const totalMatches = primaryMatches.length + secondaryMatches.length;
+  
+  // Yêu cầu chặt chẽ hơn: PHẢI có ít nhất 1 primary HOẶC 3 secondary
+  const hasEnoughKeywords = primaryMatches.length >= 1 || secondaryMatches.length >= 3;
+  
+  if (hasEnoughKeywords) {
+    console.log(`✅ [FILTER] ACCEPTED: "${title.substring(0, 50)}..." - Primary: ${primaryMatches.length}, Secondary: ${secondaryMatches.length}`);
+  } else {
+    console.log(`⚠️ [FILTER] REJECTED: "${title.substring(0, 50)}..." - Not enough construction keywords (P:${primaryMatches.length}, S:${secondaryMatches.length})`);
+  }
+  
+  return hasEnoughKeywords;
+};
+
 // Helper function để tạo sản phẩm fallback
 const createFallbackProduct = (productName) => {
   return [{
@@ -288,16 +521,19 @@ export const fetchSerpProductInfo = async (productName) => {
       await debugSerpResponse(productName);
     }
 
-    // Làm sạch tên sản phẩm
-    const cleanedProductName = productName.replace(/[^\w\s]/gi, '').trim();
+    // Làm sạch và tối ưu hóa từ khóa tìm kiếm cho lĩnh vực xây dựng
+    const optimizedQuery = optimizeConstructionSearchQuery(productName);
 
     const params = new URLSearchParams({
       engine: 'google_shopping',
-      q: cleanedProductName,
+      q: optimizedQuery,
       api_key: SERP_API_KEY,
-      num: 5, // Lấy 5 sản phẩm đầu tiên
+      num: 8, // Tăng số lượng để lọc tốt hơn
       hl: 'vi', // Tiếng Việt
       gl: 'vn', // Quốc gia Việt Nam
+      // Thêm filter để tập trung vào lĩnh vực xây dựng
+      tbm: 'shop',
+      tbs: 'vw:l,mr:1,cat:632,p_ord:rv' // Categories: Home & Garden > Construction
     });
 
     const controller = new AbortController();
@@ -316,9 +552,28 @@ export const fetchSerpProductInfo = async (productName) => {
 
     const data = await response.json();
 
-    // Xử lý dữ liệu từ SerpAPI
+    // Xử lý và lọc dữ liệu từ SerpAPI
     if (data.shopping_results && data.shopping_results.length > 0) {
-      return data.shopping_results.slice(0, 3).map(item => {
+      if (__DEV__) {
+        console.log(`📦 [DEBUG] Raw results: ${data.shopping_results.length}`);
+      }
+      
+      // Lọc chỉ giữ sản phẩm xây dựng
+      const filteredResults = data.shopping_results.filter(item => 
+        isConstructionRelatedProduct(item.title, item.snippet, item.source)
+      );
+
+      if (__DEV__) {
+        console.log(`🔧 [DEBUG] After filtering: ${filteredResults.length} construction products`);
+      }
+
+      // Nếu không có sản phẩm xây dựng nào, trả về fallback
+      if (filteredResults.length === 0) {
+        console.log(`⚠️ [DEBUG] No construction-related products found for: ${productName}`);
+        return createFallbackProduct(productName);
+      }
+
+      return filteredResults.slice(0, 3).map(item => {
         // CHÍNH SÁCH ƯU TIÊN LINK MỚI - sử dụng validateAndCleanProductLink:
         // 1. product_link (link trực tiếp đến trang sản phẩm, bao gồm Google Shopping)
         // 2. merchant.link (link shop)
@@ -445,18 +700,21 @@ export const debugSerpResponse = async (productName) => {
   if (!__DEV__) return;
 
   try {
-    const cleanedProductName = productName.replace(/[^\w\s]/gi, '').trim();
+    const optimizedQuery = optimizeConstructionSearchQuery(productName);
 
     const params = new URLSearchParams({
       engine: 'google_shopping',
-      q: cleanedProductName,
+      q: optimizedQuery,
       api_key: SERP_API_KEY,
       num: 3,
       hl: 'vi',
       gl: 'vn',
+      tbm: 'shop',
+      tbs: 'vw:l,mr:1,cat:632,p_ord:rv'
     });
 
-    console.log(`🔍 [DEBUG] Searching SerpAPI for: ${productName}`);
+    console.log(`🔍 [DEBUG] Original query: ${productName}`);
+    console.log(`🎯 [DEBUG] Optimized query: ${optimizedQuery}`);
     console.log(`📡 [DEBUG] URL: ${SERP_API_BASE_URL}?${params}`);
 
     const response = await fetch(`${SERP_API_BASE_URL}?${params}`);
@@ -472,6 +730,12 @@ export const debugSerpResponse = async (productName) => {
 
     if (data.shopping_results && data.shopping_results.length > 0) {
       console.log(`✅ [DEBUG] Found ${data.shopping_results.length} shopping results`);
+      
+      // Kiểm tra filtering
+      const filteredResults = data.shopping_results.filter(item => 
+        isConstructionRelatedProduct(item.title, item.snippet, item.source)
+      );
+      console.log(`🔧 [DEBUG] After filtering: ${filteredResults.length} construction-related products`);
 
       const sample = data.shopping_results[0];
       console.log('🛍️ [DEBUG] Sample product fields:', Object.keys(sample));
@@ -480,29 +744,15 @@ export const debugSerpResponse = async (productName) => {
         price: sample.price,
         source: sample.source,
         thumbnail: sample.thumbnail ? 'Has thumbnail' : 'No thumbnail',
-        link: sample.link ? sample.link : 'No link',
-        product_link: sample.product_link ? sample.product_link : 'No product_link',
-        merchant: sample.merchant ? {
-          name: sample.merchant.name,
-          link: sample.merchant.link
-        } : 'No merchant',
-        extracted_price: sample.extracted_price ? {
-          value: sample.extracted_price.value,
-          link: sample.extracted_price.link
-        } : 'No extracted_price',
-        rating: sample.rating,
-        reviews: sample.reviews,
-        snippet: sample.snippet
+        isConstructionRelated: isConstructionRelatedProduct(sample.title, sample.snippet, sample.source)
       });
 
-      // Log tất cả links có sẵn
-      console.log('🔗 [DEBUG] All available links:');
-      data.shopping_results.slice(0, 3).forEach((item, index) => {
+      // Log filtered products
+      console.log('� [DEBUG] Construction-related products:');
+      filteredResults.slice(0, 3).forEach((item, index) => {
         console.log(`   Product ${index + 1}: ${item.title}`);
-        console.log(`   - link: ${item.link || 'None'}`);
-        console.log(`   - product_link: ${item.product_link || 'None'}`);
-        console.log(`   - merchant.link: ${item.merchant?.link || 'None'}`);
-        console.log(`   - extracted_price.link: ${item.extracted_price?.link || 'None'}`);
+        console.log(`   - Price: ${item.price || 'No price'}`);
+        console.log(`   - Source: ${item.source || 'No source'}`);
         console.log('   ---');
       });
 
