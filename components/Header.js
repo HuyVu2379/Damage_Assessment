@@ -17,7 +17,7 @@ const Header = ({ onNewChat, theme }) => {
             </View>
 
             <View style={styles.centerActions}>
-                <Text style={[styles.title, { color: theme.colors.headerText }]}>🏗️ AI Xây Dựng</Text>
+                <Text style={[styles.title, { color: theme.colors.headerText }]}>🏗️ AI phát hiện lỗi công trình</Text>
             </View>
 
             <View style={styles.rightActions}>
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
         fontSize: moderateScale(17),
         fontWeight: 'bold',
         textShadowColor: 'rgba(0, 0, 0, 0.1)',
-        textShadowOffset: {width: 1, height: 1},
+        textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 2,
     },
     rightActions: {
