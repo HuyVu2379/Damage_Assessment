@@ -26,30 +26,31 @@ const CameraModal = ({
                     style={styles.camera}
                     ref={(ref) => cameraRef = ref}
                     facing="back"
-                >
-                    <View style={styles.cameraButtonContainer}>
-                        <TouchableOpacity
-                            style={styles.cameraButton}
-                            onPress={onClose}
-                        >
-                            <IconButton icon="close" size={moderateScale(30)} color="white" />
-                        </TouchableOpacity>
+                />
+                
+                {/* Đặt controls bên ngoài CameraView với absolute positioning */}
+                <View style={styles.cameraButtonContainer}>
+                    <TouchableOpacity
+                        style={styles.cameraButton}
+                        onPress={onClose}
+                    >
+                        <IconButton icon="close" size={moderateScale(30)} color="white" />
+                    </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={styles.captureButton}
-                            onPress={() => onTakePicture(cameraRef)}
-                        >
-                            <View style={styles.captureButtonInner} />
-                        </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.captureButton}
+                        onPress={() => onTakePicture(cameraRef)}
+                    >
+                        <View style={styles.captureButtonInner} />
+                    </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={styles.cameraButton}
-                            onPress={onPickImage}
-                        >
-                            <IconButton icon="image" size={moderateScale(30)} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                </CameraView>
+                    <TouchableOpacity
+                        style={styles.cameraButton}
+                        onPress={onPickImage}
+                    >
+                        <IconButton icon="image" size={moderateScale(30)} color="white" />
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         </Modal>
     );

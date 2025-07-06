@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet, TextInput as RNTextInput } from 'react-native';
 import { TextInput, IconButton, ActivityIndicator } from 'react-native-paper';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 
-const ChatInput = ({
+const ChatInput = memo(({
     inputText,
     onChangeText,
     isLoading,
@@ -18,15 +18,15 @@ const ChatInput = ({
 }) => {
     const [isFocused, setIsFocused] = useState(false);
 
-    const handleFocus = () => {
-        setIsFocused(true);
-    };
+    // Optimize callbacks
+    const handleFocus = useCallback(() => setIsFocused(true), []);
+    const handleBlur = useCallback(() => setIsFocused(false), []);
+    const handleSend = useCallback(() => {
+        if (canSend && !isLoading) {
+            onSendMessage();
+        }
+    }, [canSend, isLoading, onSendMessage]);
 
-    const handleBlur = () => {
-        setIsFocused(false);
-    };
-
-    // Thu gọn khi đang focus hoặc có text
     const isCompact = isFocused || inputText.trim().length > 0;
 
     return (
@@ -71,6 +71,11 @@ const ChatInput = ({
                 multiline={false}
                 textAlign="left"
                 textAlignVertical="center"
+                // Performance optimizations
+                autoCorrect={false}
+                autoCapitalize="none"
+                textContentType="none"
+                keyboardShouldPersistTaps="handled"
             />
 
             {!isCompact && !canSend && (
@@ -98,7 +103,7 @@ const ChatInput = ({
                 icon="send"
                 size={moderateScale(22)}
                 iconColor={canSend && !isLoading ? '#FFFFFF' : theme.colors.iconPrimary}
-                onPress={onSendMessage}
+                onPress={handleSend}
                 disabled={isLoading || !canSend}
                 style={canSend && !isLoading ? { 
                     backgroundColor: theme.colors.accent,
@@ -109,7 +114,7 @@ const ChatInput = ({
             />
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     chatInputContainer: {
