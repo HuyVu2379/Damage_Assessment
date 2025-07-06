@@ -1,29 +1,28 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Button, IconButton } from 'react-native-paper';
+import { View, StyleSheet, Text } from 'react-native';
+import { IconButton } from 'react-native-paper';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 
-const Header = ({ selectedModel, onOpenModal, onNewChat, theme }) => {
+const Header = ({ onNewChat, theme }) => {
     return (
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.colors.header, borderBottomColor: theme.colors.outline }]}>
             <View style={styles.leftActions}>
                 <IconButton
                     icon="menu"
                     size={24}
+                    iconColor={theme.colors.headerText}
                     onPress={onNewChat}
                     style={styles.iconButton}
                 />
             </View>
 
-            <Button
-                onPress={onOpenModal}
-                icon="robot"
-                mode="contained"
-                color={theme.colors.primary}
-                labelStyle={{ fontSize: moderateScale(12) }}
-            >
-                Model: {selectedModel}
-            </Button>
+            <View style={styles.centerActions}>
+                <Text style={[styles.title, { color: theme.colors.headerText }]}>🏗️ AI Xây Dựng</Text>
+            </View>
+
+            <View style={styles.rightActions}>
+                {/* Có thể thêm icon history hoặc setting sau */}
+            </View>
         </View>
     );
 };
@@ -31,21 +30,43 @@ const Header = ({ selectedModel, onOpenModal, onNewChat, theme }) => {
 const styles = StyleSheet.create({
     header: {
         paddingTop: verticalScale(15),
-        paddingBottom: verticalScale(10),
+        paddingBottom: verticalScale(12),
         paddingHorizontal: scale(10),
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#ffffff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#ddd'
+        borderBottomWidth: 3,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 3,
+        },
+        shadowOpacity: 0.15,
+        shadowRadius: 4.65,
     },
     leftActions: {
         flexDirection: 'row',
         alignItems: 'center',
+        width: scale(60),
+    },
+    centerActions: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    title: {
+        fontSize: moderateScale(17),
+        fontWeight: 'bold',
+        textShadowColor: 'rgba(0, 0, 0, 0.1)',
+        textShadowOffset: {width: 1, height: 1},
+        textShadowRadius: 2,
     },
     rightActions: {
-        width: scale(80), // Để cân bằng với leftActions
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: scale(60),
+        justifyContent: 'flex-end',
     },
     iconButton: {
         margin: 0,
