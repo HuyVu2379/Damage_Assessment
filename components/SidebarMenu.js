@@ -74,19 +74,19 @@ const SidebarMenu = ({ visible, onClose, onNewChat, onLoadConversation, theme })
         onLoadConversation(chatData.messages);
         onClose();
     };
-    
+
     const handleRenameChat = async (chatId, newName) => {
         try {
             const history = await chatStorage.getChatHistory();
             const updatedHistory = history.map(chat =>
                 chat.id === chatId ? { ...chat, name: newName, timestamp: Date.now() } : chat
             );
-            
+
             const success = await chatStorage.saveChatHistory(updatedHistory);
             if (success) {
-                loadChatHistory(); 
+                loadChatHistory();
             } else {
-                 Alert.alert('Lỗi', 'Không thể lưu tên mới vào bộ nhớ.');
+                Alert.alert('Lỗi', 'Không thể lưu tên mới vào bộ nhớ.');
             }
         } catch (error) {
             console.error('Error renaming chat:', error);

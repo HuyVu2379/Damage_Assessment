@@ -16,11 +16,9 @@ import { IconButton } from 'react-native-paper';
 import Header from './components/Header';
 import MessageItem from './components/MessageItem';
 import LoadingIndicator from './components/LoadingIndicator';
-import ModelSelectionModal from './components/ModelSelectionModal';
 import CameraModal from './components/CameraModal';
 import ImagePreview from './components/ImagePreview';
 import ChatInput from './components/ChatInput';
-import ChatHistoryModal from './components/ChatHistoryModal';
 import SidebarMenu from './components/SidebarMenu';
 
 // Hooks
@@ -30,9 +28,10 @@ import { useCamera } from './hooks/useCamera';
 // Utils
 import { theme } from './utils/theme';
 import { verticalScale, scale } from './utils/scaling';
+import { convertImageToBase64 } from './utils/convert';
 
 // API
-import { getAiResponse, parseProductSuggestions, validateProductData } from './services/api';
+import { getAiResponse } from './services/api';
 import { chatStorage } from './services/chatStorage';
 
 const App = () => {
@@ -41,9 +40,7 @@ const App = () => {
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('gemini'); // Mặc định là gemini
   const [pickedImage, setPickedImage] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
   const [chatHistoryVisible, setChatHistoryVisible] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [shouldScrollToEnd, setShouldScrollToEnd] = useState(true);
@@ -158,16 +155,23 @@ const App = () => {
     setIsLoading(true);
 
     let aiResponseContent;
-    
+
     // Tự động chọn model: có ảnh dùng gemini-vision, không có ảnh dùng gemini text
     if (hasImage) {
-      // Có ảnh: Luôn dùng gemini-vision với prompt thông minh
-      const { convertImageToBase64 } = await import('./services/api');
-      
+
       try {
         const base64Image = await convertImageToBase64(pickedImage);
-        // AI sẽ tự động nhận diện và phản hồi phù hợp
-        aiResponseContent = await getAiResponse([], 'gemini-vision', true, base64Image);
+
+        // Chuẩn bị context cho AI: bao gồm cả lịch sử chat và câu hỏi hiện tại
+        const contextMessages = newMessages
+          .filter(msg => msg.role !== 'system')
+          .map(msg => ({
+            role: msg.role,
+            content: msg.imageUri ? msg.content.replace(/\[Đã gửi 1 ảnh\]\s*/, '') : msg.content
+          }));
+
+        // AI sẽ tự động nhận diện và phản hồi phù hợp với cả ảnh và text
+        aiResponseContent = await getAiResponse(contextMessages, 'gemini-vision', true, base64Image);
       } catch (error) {
         console.error('Lỗi xử lý ảnh:', error);
         aiResponseContent = 'Xin lỗi, có lỗi xảy ra khi xử lý ảnh. Bạn có thể thử lại không?';
@@ -177,29 +181,22 @@ const App = () => {
       const apiPayload = newMessages
         .filter(msg => msg.role !== 'system')
         .map(msg => ({ role: msg.role, content: msg.content }));
-      
-      aiResponseContent = await getAiResponse(apiPayload, 'gemini', false);
+
+      aiResponseContent = await getAiResponse(apiPayload, 'gemini-vision', false, null);
     }
 
     // Parse sản phẩm nếu AI phát hiện cần gợi ý sản phẩm
     let aiResponseMessage;
     if (hasImage) {
-      // Với ảnh, AI có thể tự động gợi ý sản phẩm nếu phát hiện hư hỏng
-      console.log('Đang parse phản hồi AI cho ảnh...');
+      // Với ảnh, hiển thị trực tiếp nội dung AI trả về
+      console.log('Đang xử lý phản hồi AI cho ảnh...');
       console.log('AI Response Content:', aiResponseContent);
-      
-      const parsedResponse = parseProductSuggestions(aiResponseContent);
-      console.log('Parsed Response:', parsedResponse);
-      
-      const validatedProducts = validateProductData(parsedResponse.products);
 
-      console.log('Tạo tin nhắn AI với sản phẩm:', validatedProducts);
-      console.log('Analysis content:', parsedResponse.analysis);
-      
+      // Tạm thời hiển thị trực tiếp, có thể parse sản phẩm sau
       aiResponseMessage = {
         role: 'assistant',
-        content: parsedResponse.analysis,
-        products: validatedProducts
+        content: aiResponseContent,
+        products: [] // Tạm thời để trống
       };
     } else {
       aiResponseMessage = { role: 'assistant', content: aiResponseContent };
@@ -291,23 +288,6 @@ const App = () => {
           onTakePicture={takePicture}
           onPickImage={pickImage}
         />
-
-        {/* Chat History Modal */}
-        <ChatHistoryModal
-          visible={chatHistoryVisible}
-          onClose={() => setChatHistoryVisible(false)}
-          onLoadConversation={loadConversation}
-          currentMessages={messages}
-          theme={theme}
-        />
-
-        {/* Model Selection Modal - Tạm thời ẩn */}
-        {/* <ModelSelectionModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          onSelectModel={selectModel}
-          selectedModel={selectedModel}
-        /> */}
 
         {/* Header */}
         <Header
