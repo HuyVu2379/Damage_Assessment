@@ -37,8 +37,7 @@ const log = __DEV__ ? console.log : () => {};
 const error = __DEV__ ? console.error : () => {};
 
 // API
-import { getAiResponse, parseProductSuggestions, validateProductData } from './services/api';
-import { getAiResponse as getAiResponseWithImage } from './services/api_new';
+import { getAiResponse, parseProductSuggestions, validateProductData, convertImageToBase64, analyzeImageWithGemini } from './services/api';
 import { chatStorage } from './services/chatStorage';
 
 const App = () => {
@@ -187,30 +186,31 @@ const App = () => {
 
     let aiResponseContent;
     
-    // Tự động chọn model: có ảnh dùng gemini-vision, không có ảnh dùng gemini text
+    // Tự động chọn model: có ảnh dùng Gemini Vision, không có ảnh dùng gemini text
     if (hasImage) {
-      // Có ảnh: Luôn dùng gemini-vision với prompt thông minh
+      // Có ảnh: Dùng Gemini Vision để phân tích
       try {
-        // Dynamically import để tránh blocking
-        const { convertImageToBase64 } = await import('./services/api_new');
-        
+        console.log('🖼️ Bắt đầu xử lý ảnh...');
         const base64Image = await convertImageToBase64(pickedImage);
+        console.log('✅ Convert ảnh thành công');
         
-        // Timeout để tránh bị treo
+        // Timeout dài hơn cho việc phân tích ảnh (45 giây)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout after 30 seconds')), 30000)
+          setTimeout(() => reject(new Error('Timeout after 45 seconds')), 45000)
         );
         
+        console.log('🤖 Gửi ảnh đến Gemini Vision...');
         aiResponseContent = await Promise.race([
-          getAiResponseWithImage([], 'gemini-vision', true, base64Image),
+          analyzeImageWithGemini(base64Image),
           timeoutPromise
         ]);
+        console.log('✅ Nhận phản hồi từ Gemini Vision');
       } catch (error) {
-        error('Lỗi xử lý ảnh:', error);
+        console.error('❌ Lỗi xử lý ảnh:', error);
         setIsLoading(false);
         Alert.alert(
           'Lỗi xử lý ảnh', 
-          'Không thể phân tích ảnh. Vui lòng thử lại hoặc gửi tin nhắn text.',
+          `Không thể phân tích ảnh: ${error.message}\n\nVui lòng thử lại hoặc gửi tin nhắn text.`,
           [{ text: 'OK', onPress: () => {} }]
         );
         return; // Dừng execution nếu có lỗi
