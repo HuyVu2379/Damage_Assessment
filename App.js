@@ -37,7 +37,7 @@ const log = __DEV__ ? console.log : () => {};
 const error = __DEV__ ? console.error : () => {};
 
 // API
-import { getAiResponse, parseProductSuggestions, validateProductData, convertImageToBase64, analyzeImageWithGemini } from './services/api';
+import { getAiResponse, parseProductSuggestions, validateProductData, convertImageToBase64, analyzeImageWithGemini, extractProductNames, searchMultipleProducts, isProductRelatedQuery, extractProductKeywordsFromQuery } from './services/api';
 import { chatStorage } from './services/chatStorage';
 
 const App = () => {
@@ -188,13 +188,13 @@ const App = () => {
     
     // Tự động chọn model: có ảnh dùng Gemini Vision, không có ảnh dùng gemini text
     if (hasImage) {
-      // Có ảnh: Dùng Gemini Vision để phân tích
+      // PHƯƠNG ÁN 2: Chia thành 2 tin nhắn riêng biệt
       try {
         console.log('🖼️ Bắt đầu xử lý ảnh...');
         const base64Image = await convertImageToBase64(pickedImage);
         console.log('✅ Convert ảnh thành công');
         
-        // Timeout dài hơn cho việc phân tích ảnh (45 giây)
+        // BƯỚC 1: Phân tích hư hỏng với Gemini Vision (không gợi ý sản phẩm)
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout after 45 seconds')), 45000)
         );
@@ -205,6 +205,70 @@ const App = () => {
           timeoutPromise
         ]);
         console.log('✅ Nhận phản hồi từ Gemini Vision');
+        
+        // Hiển thị tin nhắn phân tích trước
+        const analysisMessage = { 
+          role: 'assistant', 
+          content: aiResponseContent 
+        };
+        setMessages(prev => [...prev, analysisMessage]);
+        setIsLoading(false);
+        
+        // BƯỚC 2: Tự động tìm và hiển thị sản phẩm sau 1 giây
+        setTimeout(async () => {
+          setIsLoading(true);
+          
+          try {
+            // Extract tên sản phẩm từ phân tích
+            const productNames = extractProductNames(aiResponseContent);
+            
+            if (productNames.length > 0) {
+              console.log('🛍️ Tìm sản phẩm với SerpAPI...');
+              
+              // Tìm sản phẩm thật với SerpAPI
+              const products = await searchMultipleProducts(productNames);
+              
+              if (products.length > 0) {
+                // Hiển thị tin nhắn sản phẩm
+                const productMessage = {
+                  role: 'assistant',
+                  content: '🛒 **Sản phẩm được đề xuất**\n\nDựa trên phân tích hư hỏng, đây là những sản phẩm phù hợp để sửa chữa:',
+                  products: products
+                };
+                
+                setMessages(prev => [...prev, productMessage]);
+                console.log('✅ Hiển thị sản phẩm thành công');
+              } else {
+                // Fallback nếu không tìm thấy sản phẩm
+                const fallbackMessage = {
+                  role: 'assistant',
+                  content: '💡 Để có gợi ý sản phẩm cụ thể, bạn có thể hỏi trực tiếp như: "Gợi ý keo trám chống thấm" hoặc "Sơn chống thấm nào tốt?"'
+                };
+                setMessages(prev => [...prev, fallbackMessage]);
+              }
+            } else {
+              // Không extract được sản phẩm
+              const fallbackMessage = {
+                role: 'assistant',
+                content: '💡 Nếu cần gợi ý sản phẩm cụ thể, bạn có thể hỏi thêm về loại vật liệu muốn sử dụng.'
+              };
+              setMessages(prev => [...prev, fallbackMessage]);
+            }
+          } catch (productError) {
+            console.error('❌ Lỗi tìm sản phẩm:', productError);
+            // Silent fail - không hiển thị lỗi cho user
+          }
+          
+          setIsLoading(false);
+          
+          // Force scroll to end
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 200);
+        }, 1000);
+        
+        return; // Important: return để không chạy code phía dưới
+        
       } catch (error) {
         console.error('❌ Lỗi xử lý ảnh:', error);
         setIsLoading(false);
@@ -216,30 +280,75 @@ const App = () => {
         return; // Dừng execution nếu có lỗi
       }
     } else {
-      // Không có ảnh: Dùng gemini text model cho chat thường
+      // Không có ảnh: Dùng text model cho chat thường
       const apiPayload = newMessages
         .filter(msg => msg.role !== 'system')
         .map(msg => ({ role: msg.role, content: msg.content }));
       
-      aiResponseContent = await getAiResponse(apiPayload, 'gemini', false);
-    }
-
-    // Parse sản phẩm nếu AI phát hiện cần gợi ý sản phẩm
-    let aiResponseMessage;
-    if (hasImage) {
-      // Với ảnh, AI có thể tự động gợi ý sản phẩm nếu phát hiện hư hỏng
-      const parsedResponse = parseProductSuggestions(aiResponseContent);
-      const validatedProducts = validateProductData(parsedResponse.products);
+      // Sử dụng model được chọn (groq hoặc gemini)
+      aiResponseContent = await getAiResponse(apiPayload, selectedModel, false);
       
-      aiResponseMessage = {
-        role: 'assistant',
-        content: parsedResponse.analysis,
-        products: validatedProducts
-      };
-    } else {
-      aiResponseMessage = { role: 'assistant', content: aiResponseContent };
+      // Hiển thị tin nhắn AI response trước
+      const aiResponseMessage = { role: 'assistant', content: aiResponseContent };
+      setMessages(prev => [...prev, aiResponseMessage]);
+      setIsLoading(false);
+      
+      // Kiểm tra xem có phải câu hỏi về sản phẩm không
+      const userQuery = inputText.trim();
+      if (isProductRelatedQuery(userQuery)) {
+        console.log('🛍️ Detected product-related query, searching with SerpAPI...');
+        
+        // Delay nhỏ để user thấy tin nhắn AI trước
+        setTimeout(async () => {
+          setIsLoading(true);
+          
+          try {
+            // Extract keywords từ câu hỏi user
+            const productKeywords = extractProductKeywordsFromQuery(userQuery);
+            console.log('🔍 Product keywords:', productKeywords);
+            
+            if (productKeywords.length > 0) {
+              // Tìm sản phẩm thật với SerpAPI
+              const products = await searchMultipleProducts(productKeywords);
+              
+              if (products.length > 0) {
+                // Hiển thị tin nhắn sản phẩm
+                const productMessage = {
+                  role: 'assistant',
+                  content: '🛒 **Sản phẩm được đề xuất**\n\nDựa trên câu hỏi của bạn, đây là những sản phẩm phù hợp từ các cửa hàng:',
+                  products: products
+                };
+                
+                setMessages(prev => [...prev, productMessage]);
+                console.log('✅ Displayed products for text query');
+              } else {
+                console.log('❌ No products found for query');
+              }
+            }
+          } catch (productError) {
+            console.error('❌ Error searching products for text query:', productError);
+            // Silent fail - không hiển thị lỗi cho user
+          }
+          
+          setIsLoading(false);
+          
+          // Force scroll to end
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 200);
+        }, 800); // Delay 800ms để user đọc AI response trước
+      } else {
+        // Không phải câu hỏi về sản phẩm, chỉ hiển thị AI response
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 200);
+      }
+      
+      return; // Return để không chạy code cũ phía dưới
     }
 
+    // Phần code này không còn được sử dụng (legacy)
+    const aiResponseMessage = { role: 'assistant', content: aiResponseContent };
     setMessages(prev => [...prev, aiResponseMessage]);
     setIsLoading(false);
 
