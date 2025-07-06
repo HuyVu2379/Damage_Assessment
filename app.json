@@ -4,14 +4,15 @@
     "slug": "snack-ef3a89c6-b5a7-4b50-9076-0fff2bda581b",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.svg",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "scheme": "bdam",
     "platforms": [
       "ios",
       "android"
     ],
     "splash": {
+      "image": "./assets/splash.svg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
