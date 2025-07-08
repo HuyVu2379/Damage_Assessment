@@ -40,4 +40,12 @@ yarn-error.*
 *.tsbuildinfo
 
 # lib package
-./package-lock.json
+package-lock.json
+
+# Keystore files (DO NOT COMMIT)
+*.keystore
+bdam-release-key.keystore
+
+# Local gradle properties with sensitive data
+android/gradle.properties.local
+

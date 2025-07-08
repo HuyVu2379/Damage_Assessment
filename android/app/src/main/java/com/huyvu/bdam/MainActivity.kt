@@ -1,4 +1,4 @@
-package com.huyvu2379.snackef3a89c6b5a74b5090760fff2bda581b
+package com.huyvu.bdam
 
 import android.os.Build
 import android.os.Bundle
