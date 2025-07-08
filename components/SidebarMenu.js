@@ -17,6 +17,7 @@ import { IconButton, Divider, Provider as PaperProvider, useTheme } from 'react-
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 import { chatStorage } from '../services/chatStorage';
 import ConversationItem from './ConversationItem';
+import HelpModal from './HelpModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.85;
@@ -24,6 +25,7 @@ const SIDEBAR_WIDTH = SCREEN_WIDTH * 0.85;
 const SidebarMenu = ({ visible, onClose, onNewChat, onLoadConversation, theme }) => {
     const [slideAnim] = useState(new Animated.Value(-SIDEBAR_WIDTH));
     const [chatHistory, setChatHistory] = useState([]);
+    const [helpModalVisible, setHelpModalVisible] = useState(false);
 
     // *** BỌC HÀM NÀY BẰNG useCallback ĐỂ TRÁNH TẠO LẠI KHÔNG CẦN THIẾT ***
     const loadChatHistory = useCallback(async () => {
@@ -214,7 +216,10 @@ const SidebarMenu = ({ visible, onClose, onNewChat, onLoadConversation, theme })
                                     </Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity style={styles.footerItem}>
+                                <TouchableOpacity 
+                                    style={styles.footerItem}
+                                    onPress={() => setHelpModalVisible(true)}
+                                >
                                     <IconButton
                                         icon="help-circle"
                                         size={20}
@@ -235,6 +240,12 @@ const SidebarMenu = ({ visible, onClose, onNewChat, onLoadConversation, theme })
                     />
                 </View>
             </PaperProvider>
+            
+            <HelpModal 
+                visible={helpModalVisible}
+                onClose={() => setHelpModalVisible(false)}
+                theme={theme}
+            />
         </Modal>
     );
 };
