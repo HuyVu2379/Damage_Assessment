@@ -81,7 +81,11 @@ Bạn là chuyên gia xây dựng thân thiện, có kinh nghiệm thực tế t
       - Giải quyết vấn đề kỹ thuật
         - Chia sẻ kinh nghiệm thực tế
 
-Trả lời ngắn gọn(3 đoạn), bằng tiếng Việt, tự nhiên và có cảm xúc!`;
+⚠️ QUY TẮC QUAN TRỌNG:
+- Trả lời ngắn gọn (2-3 đoạn), bằng tiếng Việt, tự nhiên và có cảm xúc
+- KHÔNG tự động đề xuất sản phẩm trừ khi người dùng yêu cầu cụ thể
+- KHÔNG thêm dòng "nếu cần gợi ý sản phẩm" vào cuối câu trả lời
+- Chỉ tập trung trả lời câu hỏi được đặt ra`;
 
 const API_CONFIG = {
   'gemini-vision': {
@@ -100,10 +104,26 @@ export const responseText = async (messageHistory) => {
   const config = API_CONFIG['gemini-vision'];
 
   try {
+    // Kiểm tra và xử lý messageHistory
+    console.log('📝 [DEBUG] messageHistory:', messageHistory);
+    
+    let userMessage = '';
+    if (messageHistory && messageHistory.length > 0) {
+      // Lấy tin nhắn cuối cùng của user
+      const lastMessage = messageHistory[messageHistory.length - 1];
+      userMessage = lastMessage.content || lastMessage.text || lastMessage || '';
+    }
+    
+    console.log('💬 [DEBUG] User message:', userMessage);
+    
+    if (!userMessage || userMessage.toString().trim() === '') {
+      throw new Error("Không có nội dung tin nhắn để xử lý.");
+    }
+
     // Tạo contents với prompt hệ thống và nội dung user
     const contents = [
       {
-        parts: [{ text: GENERAL_CHAT_PROMPT + "\n\nCâu hỏi: " + messageHistory[0].content }],
+        parts: [{ text: GENERAL_CHAT_PROMPT + "\n\nCâu hỏi: " + userMessage.toString() }],
         role: 'user'
       }
     ];
@@ -111,6 +131,8 @@ export const responseText = async (messageHistory) => {
     const body = JSON.stringify({
       contents: contents
     });
+
+    console.log('📤 [DEBUG] Request body:', body);
 
     const response = await fetch(config.endpoint, {
       method: 'POST',
@@ -219,12 +241,31 @@ export const getAiResponse = async (content, modelType, hasImage = false, imageB
   }
 
   try {
+    console.log('🤖 [DEBUG] getAiResponse called with:', {
+      content: typeof content === 'string' ? content.substring(0, 100) + '...' : content,
+      contentType: typeof content,
+      modelType,
+      hasImage,
+    });
+
     if (hasImage && imageBase64) {
       // Xử lý ảnh với Gemini Vision
       return await analyzeImageWithGemini(imageBase64, DAMAGE_ANALYSIS_PROMPT, []);
     } else {
-      // Xử lý chat text thuần - tạo messageHistory đơn giản từ content
-      const messageHistory = [{ role: 'user', content: content }];
+      // Xử lý chat text thuần
+      let finalContent = content;
+      
+      // Nếu content là array (messageHistory), extract nội dung cuối cùng
+      if (Array.isArray(content)) {
+        console.log('📝 [DEBUG] Content is array, extracting last message');
+        const lastMessage = content[content.length - 1];
+        finalContent = lastMessage.content || lastMessage.text || lastMessage || '';
+      }
+      
+      console.log('💬 [DEBUG] Final content:', finalContent);
+      
+      // Tạo messageHistory đơn giản
+      const messageHistory = [finalContent];
       return await responseText(messageHistory);
     }
   } catch (error) {
