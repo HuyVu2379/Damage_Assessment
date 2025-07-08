@@ -231,7 +231,7 @@ const App = () => {
               setMessages(prev => [...prev, productMessage]);
               console.log('✅ Hiển thị sản phẩm thành công');
             }
-            
+
             setIsLoading(false);
           } else {
             // KHÔNG thêm message gợi ý nếu AI không đề xuất sản phẩm
