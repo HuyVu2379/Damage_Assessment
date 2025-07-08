@@ -56,7 +56,19 @@ const ConversationItem = ({ conversation, onLoad, onRename, onDelete }) => {
         if (name) return name;
         const firstUserMessage = messages.find(msg => msg.role === 'user');
         if (firstUserMessage) {
-            const content = firstUserMessage.content;
+            let content = firstUserMessage.content;
+
+            // Xử lý tin nhắn có ảnh
+            if (firstUserMessage.imageUri) {
+                // Nếu chỉ có ảnh không có text
+                if (content === '[Đã gửi 1 ảnh]') {
+                    content = 'Đã gửi 1 ảnh';
+                } else {
+                    // Nếu có cả ảnh và text, loại bỏ prefix [Đã gửi 1 ảnh]
+                    content = content.replace(/^\[Đã gửi 1 ảnh\]\s*/, '🖼️ ');
+                }
+            }
+
             return content.length > 40 ? content.substring(0, 40) + '...' : content;
         }
         return 'Cuộc trò chuyện mới';
@@ -99,32 +111,32 @@ const ConversationItem = ({ conversation, onLoad, onRename, onDelete }) => {
 
 // Styles không đổi...
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginVertical: 4,
-  },
-  leftContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
-  title: {
-    marginLeft: 12,
-    fontSize: moderateScale(14),
-    color: '#333',
-    flex: 1,
-  },
-  menuAnchor: {
-    padding: 5,
-    borderRadius: 20,
-  },
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: '#f9f9f9',
+        borderRadius: 8,
+        marginVertical: 4,
+    },
+    leftContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 10,
+    },
+    title: {
+        marginLeft: 12,
+        fontSize: moderateScale(14),
+        color: '#333',
+        flex: 1,
+    },
+    menuAnchor: {
+        padding: 5,
+        borderRadius: 20,
+    },
 });
 
 export default ConversationItem;

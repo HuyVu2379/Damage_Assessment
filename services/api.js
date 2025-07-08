@@ -106,16 +106,16 @@ export const responseText = async (messageHistory) => {
   try {
     // Kiểm tra và xử lý messageHistory
     console.log('📝 [DEBUG] messageHistory:', messageHistory);
-    
+
     let userMessage = '';
     if (messageHistory && messageHistory.length > 0) {
       // Lấy tin nhắn cuối cùng của user
       const lastMessage = messageHistory[messageHistory.length - 1];
       userMessage = lastMessage.content || lastMessage.text || lastMessage || '';
     }
-    
+
     console.log('💬 [DEBUG] User message:', userMessage);
-    
+
     if (!userMessage || userMessage.toString().trim() === '') {
       throw new Error("Không có nội dung tin nhắn để xử lý.");
     }
@@ -254,16 +254,16 @@ export const getAiResponse = async (content, modelType, hasImage = false, imageB
     } else {
       // Xử lý chat text thuần
       let finalContent = content;
-      
+
       // Nếu content là array (messageHistory), extract nội dung cuối cùng
       if (Array.isArray(content)) {
         console.log('📝 [DEBUG] Content is array, extracting last message');
         const lastMessage = content[content.length - 1];
         finalContent = lastMessage.content || lastMessage.text || lastMessage || '';
       }
-      
+
       console.log('💬 [DEBUG] Final content:', finalContent);
-      
+
       // Tạo messageHistory đơn giản
       const messageHistory = [finalContent];
       return await responseText(messageHistory);
@@ -308,7 +308,7 @@ const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 giờ
  */
 const optimizeConstructionSearchQuery = (productName) => {
   console.log(`🔍 [QUERY] Optimizing: "${productName}"`);
-  
+
   // Mapping từ khóa với thương hiệu và model cụ thể - tập trung vào vật liệu thực
   const constructionKeywordMap = {
     'keo': 'keo dán vật liệu xây nhà sikaflex sika',
@@ -374,69 +374,69 @@ const optimizeConstructionSearchQuery = (productName) => {
  */
 const isConstructionRelatedProduct = (title = '', snippet = '', source = '') => {
   const text = `${title} ${snippet} ${source}`.toLowerCase();
-  
+
   console.log(`🔍 [FILTER] Checking: "${title.substring(0, 80)}..."`);
-  
+
   // Keywords LOẠI BỎ NGAY (mở rộng và chặt chẽ hơn)
   const strictExcludeKeywords = [
     // Thực phẩm và đồ uống
     'kim chi', 'cải thảo', 'thực phẩm', 'ăn uống', 'đồ ăn', 'nước uống', 'thức ăn',
     'rau củ', 'trái cây', 'bánh kẹo', 'gia vị', 'nấu ăn', 'món ăn',
-    
+
     // May vá và thời trang
     'may vá', 'kim may', 'chỉ may', 'vải may', 'quần áo', 'thời trang',
     'áo', 'quần', 'váy', 'giày dép', 'túi xách',
-    
+
     // Trang sức
     'kim cương trang sức', 'nhẫn', 'dây chuyền', 'bông tai', 'vòng tay',
     'đồng hồ', 'trang sức', 'vàng bạc',
-    
+
     // Y tế và làm đẹp
     'thuốc', 'vitamin', 'thực phẩm chức năng', 'mỹ phẩm', 'làm đẹp',
     'kem dưỡng', 'serum', 'toner', 'sữa rửa mặt',
-    
+
     // Điện tử
     'điện thoại', 'máy tính', 'laptop', 'game', 'đồ chơi', 'console',
     'tv', 'tivi', 'máy ảnh', 'camera', 'tai nghe',
-    
+
     // Xe cộ
     'xe hơi', 'ô tô', 'xe máy', 'phụ tung xe', 'lốp xe', 'nhớt xe',
-    
+
     // Sách và tài liệu
     'sách', 'truyện', 'manga', 'tiểu thuyết', 'giáo trình', 'tài liệu',
     'ebook', 'pdf', 'hướng dẫn học', 'cẩm nang học', 'bài giảng',
     'khóa học', 'học online', 'course', 'tutorial',
-    
+
     // Hợp đồng và giấy tờ  
     'hợp đồng', 'phiếu', 'đơn', 'giấy tờ', 'chứng từ', 'văn bản',
     'quy trình', 'tiêu chuẩn', 'quy định', 'biểu mẫu', 'mẫu đơn',
     'phiếu nhập', 'phiếu xuất', 'hóa đơn', 'chứng từ kế toán',
-    
+
     // Âm nhạc và giải trí
     'âm nhạc', 'nhạc cụ', 'guitar', 'piano', 'karaoke', 'loa',
-    
+
     // Thể thao
     'thể thao', 'bóng đá', 'tennis', 'gym', 'tập luyện',
-    
+
     // Thú cưng
     'chăm sóc thú cưng', 'thức ăn chó', 'thức ăn mèo', 'chuồng',
-    
+
     // Văn phòng phẩm
     'văn phòng phẩm', 'bút', 'giấy a4', 'máy in', 'stapler',
     'bút bi', 'bút chì', 'thước kẻ', 'tẩy', 'gôm',
-    
+
     // Nấu ăn
     'nồi chảo', 'bếp ga', 'lò vi sóng', 'tủ lạnh', 'máy xay',
-    
+
     // Các từ khóa kỹ thuật gây nhầm lẫn
     'kim mù lỗ', 'kim cương bằng thép cứng', 'chồn thực hành',
     'nội dung đa nền tảng', 'phần mềm', 'ứng dụng', 'app', 'software',
-    
+
     // Thêm các từ khóa mới để loại bỏ sách/tài liệu về "xây dựng" tổ chức
     'combo sách', 'bộ sách', 'giảng viên', 'học viên', 'sinh viên',
     'đại học', 'cao đẳng', 'trung cấp', 'lớp học', 'môn học',
     'kiểm tra', 'thi cử', 'đề thi', 'bài tập', 'homework',
-    
+
     // Loại bỏ các sách về "xây dựng" tổ chức/chính trị/xã hội
     'xây dựng đảng', 'xây dựng tổ chức', 'xây dựng chính quyền',
     'xây dựng nông thôn', 'xây dựng xã hội', 'xây dựng quê hương',
@@ -444,66 +444,66 @@ const isConstructionRelatedProduct = (title = '', snippet = '', source = '') => 
     'xây dựng thương hiệu', 'xây dựng kế hoạch', 'xây dựng chiến lược',
     'xây dựng nhân cách', 'xây dựng tính cách', 'xây dựng gia đình',
     'xây dựng nhóm', 'xây dựng đội ngũ', 'xây dựng mô hình kinh doanh',
-    
+
     // Từ khóa chỉ "định mức", "dự toán" mà không phải vật liệu thực
     'định mức dự toán', 'dự toán công trình', 'báo giá xây dựng',
     'hợp đồng xây dựng', 'quản lý dự án', 'giám sát thi công'
   ];
-  
+
   // Kiểm tra loại bỏ trước (strict) - nếu có bất kỳ từ nào thì loại
   const hasStrictExclude = strictExcludeKeywords.some(keyword => text.includes(keyword));
   if (hasStrictExclude) {
     console.log(`❌ [FILTER] EXCLUDED: "${title.substring(0, 50)}..." - Contains exclude keyword`);
     return false;
   }
-  
+
   // Keywords XÂY DỰNG chính xác - tập trung vào vật liệu và công cụ thực tế
   const primaryConstructionKeywords = [
     // Thay 'xây dựng' chung chung bằng các cụm từ cụ thể
     'vật liệu xây dựng', 'vật liệu xây nhà', 'xây nhà', 'xây dựng nhà', 'xây dựng công trình',
     'công trình xây dựng', 'kiến trúc xây dựng', 'thi công xây dựng', 'sửa chữa nhà',
-    
+
     // Keo và chất dính
     'keo xây dựng', 'keo trám', 'keo dán gạch', 'keo sikaflex', 'keo chống thấm',
     'keo dán ngói', 'keo trám khe', 'keo silicon', 'keo pu foam',
-    
+
     // Sơn và hoàn thiện
     'sơn tường', 'sơn nhà', 'sơn chống thấm', 'sơn nippon', 'sơn jotun', 'sơn dulux', 'sơn kova',
     'sơn nước', 'sơn dầu', 'sơn epoxy', 'sơn lót', 'sơn phủ',
-    
+
     // Xi măng và bê tông
     'xi măng', 'cement', 'bê tông', 'concrete', 'vữa xây', 'vữa trát',
     'xi măng portland', 'bột trét tường', 'vữa khô',
-    
+
     // Gạch và ngói
     'gạch xây', 'gạch ốp lát', 'gạch men', 'ngói', 'ceramic', 'granite', 'marble',
     'gạch block', 'gạch đỏ', 'gạch không nung', 'gạch ceramic', 'gạch porcelain',
-    
+
     // Thép và kim loại
     'thép xây dựng', 'thép việt', 'thép hòa phát', 'sắt thép', 'thép pomina',
     'thép cây', 'thép hình', 'thép ống', 'inox xây dựng', 'nhôm xây dựng',
-    
+
     // Cửa và khung
     'cửa nhôm', 'cửa kính', 'cửa sắt', 'cửa gỗ', 'cửa cuốn', 'cửa chống cháy',
     'khung cửa', 'khung nhôm', 'cửa sổ nhôm',
-    
+
     // Ống và đường ống
     'ống nước', 'ống thoát nước', 'ống nhựa pvc', 'ống inox', 'ống đồng',
     'ống nước lạnh', 'ống nước nóng', 'ống thoát sàn',
-    
+
     // Chống thấm và cách nhiệt
     'chống thấm', 'cách âm', 'cách nhiệt', 'chống nóng', 'màng chống thấm',
     'vật liệu cách nhiệt', 'tấm cách âm',
-    
+
     // Máy móc và công cụ
     'máy khoan', 'máy cắt', 'dụng cụ xây nhà', 'công cụ xây nhà',
     'máy trộn bê tông', 'máy đầm', 'máy cắt gạch',
-    
+
     // Thương hiệu uy tín
     'viglacera', 'đồng tâm', 'toto', 'american standard', 'inax', 'caesar',
     'holcim', 'lafarge', 'cadivi', 'minh long', 'asia', 'rang dong'
   ];
-  
+
   const secondaryConstructionKeywords = [
     'tường', 'mái', 'sàn', 'trần', 'cột', 'dầm', 'móng', 'nền',
     'lát', 'ốp', 'trám', 'sơn', 'quét vôi', 'tô trát',
@@ -515,22 +515,22 @@ const isConstructionRelatedProduct = (title = '', snippet = '', source = '') => 
     'nhôm định hình', 'inox 304', 'inox 201',
     'cát xây dựng', 'sỏi', 'đá dăm', 'đá hộc'
   ];
-  
+
   // Đếm số từ khóa xây dựng (tăng cường yêu cầu)
   const primaryMatches = primaryConstructionKeywords.filter(keyword => text.includes(keyword));
   const secondaryMatches = secondaryConstructionKeywords.filter(keyword => text.includes(keyword));
-  
+
   const totalMatches = primaryMatches.length + secondaryMatches.length;
-  
+
   // Yêu cầu chặt chẽ hơn: PHẢI có ít nhất 1 primary HOẶC 3 secondary
   const hasEnoughKeywords = primaryMatches.length >= 1 || secondaryMatches.length >= 3;
-  
+
   if (hasEnoughKeywords) {
     console.log(`✅ [FILTER] ACCEPTED: "${title.substring(0, 50)}..." - Primary: ${primaryMatches.length}, Secondary: ${secondaryMatches.length}`);
   } else {
     console.log(`⚠️ [FILTER] REJECTED: "${title.substring(0, 50)}..." - Not enough construction keywords (P:${primaryMatches.length}, S:${secondaryMatches.length})`);
   }
-  
+
   return hasEnoughKeywords;
 };
 
@@ -598,9 +598,9 @@ export const fetchSerpProductInfo = async (productName) => {
       if (__DEV__) {
         console.log(`📦 [DEBUG] Raw results: ${data.shopping_results.length}`);
       }
-      
+
       // Lọc chỉ giữ sản phẩm xây dựng
-      const filteredResults = data.shopping_results.filter(item => 
+      const filteredResults = data.shopping_results.filter(item =>
         isConstructionRelatedProduct(item.title, item.snippet, item.source)
       );
 
@@ -771,9 +771,9 @@ export const debugSerpResponse = async (productName) => {
 
     if (data.shopping_results && data.shopping_results.length > 0) {
       console.log(`✅ [DEBUG] Found ${data.shopping_results.length} shopping results`);
-      
+
       // Kiểm tra filtering
-      const filteredResults = data.shopping_results.filter(item => 
+      const filteredResults = data.shopping_results.filter(item =>
         isConstructionRelatedProduct(item.title, item.snippet, item.source)
       );
       console.log(`🔧 [DEBUG] After filtering: ${filteredResults.length} construction-related products`);
