@@ -207,16 +207,16 @@ const App = () => {
       const aiResponseMessage = { role: 'assistant', content: aiResponseContent };
       setMessages(prev => [...prev, aiResponseMessage]);
 
-      // Parse sản phẩm nếu AI phát hiện cần gợi ý sản phẩm
+      // CHỈ tìm sản phẩm khi AI đã đề xuất sản phẩm cụ thể (có dòng "Sản phẩm cần:")
       setTimeout(async () => {
-        setIsLoading(true);
-
         try {
           // Extract tên sản phẩm từ phân tích
           const productNames = extractProductNames(aiResponseContent);
 
+          // CHỈ xử lý nếu AI đã đề xuất sản phẩm cụ thể
           if (productNames.length > 0) {
-            console.log('🛍️ Tìm sản phẩm với SerpAPI...');
+            console.log('🛍️ AI đã đề xuất sản phẩm, tìm kiếm với SerpAPI...');
+            setIsLoading(true);
 
             // Tìm sản phẩm thật với SerpAPI
             const products = await searchMultipleProducts(productNames);
@@ -231,28 +231,18 @@ const App = () => {
 
               setMessages(prev => [...prev, productMessage]);
               console.log('✅ Hiển thị sản phẩm thành công');
-            } else {
-              // Fallback nếu không tìm thấy sản phẩm
-              const fallbackMessage = {
-                role: 'assistant',
-                content: '💡 Để có gợi ý sản phẩm cụ thể, bạn có thể hỏi trực tiếp như: "Gợi ý keo trám chống thấm" hoặc "Sơn chống thấm nào tốt?"'
-              };
-              setMessages(prev => [...prev, fallbackMessage]);
             }
+
+            setIsLoading(false);
           } else {
-            // Không extract được sản phẩm
-            const fallbackMessage = {
-              role: 'assistant',
-              content: '💡 Nếu cần gợi ý sản phẩm cụ thể, bạn có thể hỏi thêm về loại vật liệu muốn sử dụng.'
-            };
-            setMessages(prev => [...prev, fallbackMessage]);
+            // KHÔNG thêm message gợi ý nếu AI không đề xuất sản phẩm
+            console.log('📝 AI không đề xuất sản phẩm cụ thể, không hiển thị gợi ý');
           }
         } catch (productError) {
           console.error('❌ Lỗi tìm sản phẩm:', productError);
+          setIsLoading(false);
           // Silent fail - không hiển thị lỗi cho user
         }
-
-        setIsLoading(false);
 
         // Force scroll to end
         setTimeout(() => {

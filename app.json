@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "bdam",
+    "name": "AI phát hiện hư hại công trình",
     "slug": "bdam",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/iconCongTrinh.png",
+    "icon": "./assets/logo.jpg",
     "userInterfaceStyle": "light",
     "scheme": "bdam",
     "platforms": [
