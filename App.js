@@ -80,6 +80,7 @@ const App = () => {
   // Custom hooks
   const {
     isListening,
+    isTranscribing,
     startListening,
     stopListening,
     cancelListening
@@ -453,6 +454,7 @@ const App = () => {
               onChangeText={setInputText}
               isLoading={isLoading}
               isRecording={isListening}
+              isTranscribing={isTranscribing}
               onOpenCamera={openCamera}
               onPickImage={pickImage}
               onStartRecording={startListening}

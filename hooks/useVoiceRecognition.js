@@ -1,160 +1,108 @@
 import { useState, useEffect } from 'react';
-import { Alert, Platform, PermissionsAndroid } from 'react-native';
-import Voice from '@react-native-voice/voice';
+import { Alert } from 'react-native';
+import speechToTextService from '../services/speechToText';
 
 export const useVoiceRecognition = (setInputText, setIsLoading) => {
     const [isListening, setIsListening] = useState(false);
-    const [partialResults, setPartialResults] = useState([]);
-    const [finalResults, setFinalResults] = useState([]);
+    const [isTranscribing, setIsTranscribing] = useState(false);
 
     useEffect(() => {
-        // Setup Voice event listeners
-        Voice.onSpeechStart = onSpeechStart;
-        Voice.onSpeechRecognized = onSpeechRecognized;
-        Voice.onSpeechEnd = onSpeechEnd;
-        Voice.onSpeechError = onSpeechError;
-        Voice.onSpeechResults = onSpeechResults;
-        Voice.onSpeechPartialResults = onSpeechPartialResults;
-
+        // Cleanup function when component unmounts
         return () => {
-            // Cleanup
-            Voice.destroy().then(() => {
-                Voice.removeAllListeners();
-            }).catch(error => {
-                console.warn('Error during Voice cleanup:', error);
-            });
+            speechToTextService.cleanup();
         };
     }, []);
 
-    const requestMicrophonePermission = async () => {
-        if (Platform.OS === 'android') {
-            try {
-                const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-                    {
-                        title: 'Quyền truy cập microphone',
-                        message: 'Ứng dụng cần quyền truy cập microphone để nhận diện giọng nói',
-                        buttonNeutral: 'Hỏi lại sau',
-                        buttonNegative: 'Từ chối',
-                        buttonPositive: 'Đồng ý',
-                    }
-                );
-                return granted === PermissionsAndroid.RESULTS.GRANTED;
-            } catch (err) {
-                console.warn('Error requesting microphone permission:', err);
-                return false;
-            }
-        }
-        return true;
-    };
-
-    const onSpeechStart = () => {
-        setIsListening(true);
-        setPartialResults([]);
-        setFinalResults([]);
-        setIsLoading && setIsLoading(true);
-    };
-
-    const onSpeechRecognized = () => {
-        // Speech has been recognized
-    };
-
-    const onSpeechEnd = () => {
-        setIsListening(false);
-        setIsLoading && setIsLoading(false);
-    };
-
-    const onSpeechError = (error) => {
-        console.warn('Speech recognition error:', error);
-        setIsListening(false);
-        setIsLoading && setIsLoading(false);
-
-        let errorMessage = 'Có lỗi khi nhận diện giọng nói';
-        switch (error.error?.code) {
-            case '2':
-                errorMessage = 'Không nhận diện được âm thanh, vui lòng thử lại';
-                break;
-            case '7':
-                errorMessage = 'Không có kết nối internet';
-                break;
-            case '9':
-                errorMessage = 'Thiếu quyền microphone';
-                break;
-            default:
-                errorMessage = error.error?.message || 'Lỗi không xác định';
-        }
-
-        Alert.alert('Lỗi nhận diện giọng nói', errorMessage);
-    };
-
-    const onSpeechResults = (event) => {
-        const results = event.value;
-        setFinalResults(results);
-
-        if (results && results.length > 0) {
-            const recognizedText = results[0];
-            setInputText(recognizedText);
-            setIsLoading && setIsLoading(false);
-        }
-    };
-
-    const onSpeechPartialResults = (event) => {
-        const partialResults = event.value;
-        setPartialResults(partialResults);
-    };
-
     const startListening = async () => {
         try {
-            // Request microphone permission
-            const hasPermission = await requestMicrophonePermission();
-            if (!hasPermission) {
-                Alert.alert('Lỗi', 'Cần quyền truy cập microphone để nhận diện giọng nói');
-                return;
-            }
-
-            // Check if voice recognition is available
-            const isAvailable = await Voice.isAvailable();
-            if (!isAvailable) {
-                Alert.alert('Lỗi', 'Thiết bị không hỗ trợ nhận diện giọng nói');
-                return;
-            }
-
-            // Start voice recognition
+            console.log('🎙️ Starting voice recognition...');
             setIsLoading && setIsLoading(true);
-            await Voice.start('vi-VN'); // Vietnamese language
+            setIsListening(true);
+
+            const success = await speechToTextService.startRecording();
+            if (!success) {
+                throw new Error('Failed to start recording');
+            }
+
+            console.log('✅ Voice recording started successfully');
         } catch (error) {
-            console.warn('Error starting voice recognition:', error);
-            Alert.alert('Lỗi', 'Không thể bắt đầu nhận diện giọng nói');
+            console.error('❌ Error starting voice recognition:', error);
+            setIsListening(false);
             setIsLoading && setIsLoading(false);
+
+            let errorMessage = 'Không thể bắt đầu ghi âm';
+            if (error.message.includes('permission')) {
+                errorMessage = 'Cần quyền truy cập microphone để ghi âm';
+            }
+
+            Alert.alert('Lỗi ghi âm', errorMessage);
         }
     };
 
     const stopListening = async () => {
         try {
-            await Voice.stop();
+            if (!isListening) {
+                console.log('⚠️ Not currently listening, nothing to stop');
+                return;
+            }
+
+            console.log('🛑 Stop requested - UI will update immediately');
+
+            // Immediately update UI states for fast feedback
+            setIsListening(false);
+            setIsTranscribing(true);
+
+            console.log('🛑 Stopping recording and starting transcription...');
+
+            const audioUri = await speechToTextService.stopRecording();
+
+            if (audioUri) {
+                console.log('✅ Audio file ready, starting transcription...');
+                // Transcribe the audio using Deepgram Speech-to-Text
+                const transcript = await speechToTextService.transcribeAudio(audioUri);
+
+                if (transcript && transcript.trim()) {
+                    setInputText(transcript.trim());
+                    console.log('✅ Transcription completed:', transcript);
+                } else {
+                    console.log('⚠️ Empty transcription result');
+                    Alert.alert('Thông báo', 'Không nhận diện được giọng nói. Vui lòng thử lại.');
+                }
+            } else {
+                console.log('❌ No audio URI returned from recording');
+                Alert.alert('Lỗi', 'Không có dữ liệu âm thanh để xử lý.');
+            }
         } catch (error) {
-            console.warn('Error stopping voice recognition:', error);
+            console.error('❌ Error stopping voice recognition:', error);
+            Alert.alert('Lỗi', 'Có lỗi xảy ra khi xử lý âm thanh. Vui lòng thử lại.');
+        } finally {
+            setIsListening(false);
+            setIsTranscribing(false);
+            setIsLoading && setIsLoading(false);
+            console.log('🏁 Voice recognition process completed');
         }
     };
 
     const cancelListening = async () => {
         try {
-            await Voice.cancel();
+            await speechToTextService.cancelRecording();
             setIsListening(false);
+            setIsTranscribing(false);
             setIsLoading && setIsLoading(false);
-            setPartialResults([]);
-            setFinalResults([]);
+            console.log('Voice recognition cancelled');
         } catch (error) {
-            console.warn('Error canceling voice recognition:', error);
+            console.error('Error canceling voice recognition:', error);
+            setIsListening(false);
+            setIsTranscribing(false);
+            setIsLoading && setIsLoading(false);
         }
     };
 
     return {
         isListening,
-        partialResults,
-        finalResults,
+        isTranscribing,
         startListening,
         stopListening,
-        cancelListening
+        cancelListening,
     };
 };

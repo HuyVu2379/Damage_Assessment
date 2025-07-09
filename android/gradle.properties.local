@@ -1,5 +1,0 @@
-# Local keystore configuration - DO NOT COMMIT TO GIT
-# Copy this file to android/gradle.properties.local
-
-MYAPP_RELEASE_STORE_PASSWORD=21021491Huy
-MYAPP_RELEASE_KEY_PASSWORD=21021491Huy
