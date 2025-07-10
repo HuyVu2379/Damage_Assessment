@@ -38,6 +38,7 @@ import { chatStorage } from './services/chatStorage';
 const App = () => {
   const [messages, setMessages] = useState([
     { role: 'system', content: 'Chào bạn! Tôi là chuyên gia xây dựng AI. Gửi ảnh hoặc câu hỏi, tôi sẽ tự động nhận diện và tư vấn phù hợp!' },
+    { role: 'assistant', content: '**Test Markdown:** Đây là text *in nghiêng* và **in đậm** để kiểm tra markdown có hoạt động không. 🔧\n\n**Nguyên nhân:** *Do thấm nước*\n\n**Giải pháp:** Sử dụng keo chống thấm' },
   ]);
 
   // Optimize TextInput với debounce

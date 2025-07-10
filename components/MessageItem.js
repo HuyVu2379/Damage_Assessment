@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
+import Markdown from 'react-native-markdown-display'; // <<<--- 1. Import thư viện Markdown
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
 import { theme } from '../utils/theme';
 import ProductSuggestions from './ProductSuggestions';
@@ -9,6 +10,29 @@ const MessageItem = ({ item, index }) => {
 
     const isUserMessage = item.role === 'user';
     const hasProducts = !isUserMessage && item.products && item.products.length > 0;
+
+    // <<<--- 2. Định nghĩa style cho các thẻ Markdown ---<<<
+    // Thêm style cho thẻ in đậm (bold) và văn bản thường (body)
+    const markdownStyles = {
+        body: {
+            fontSize: moderateScale(15),
+            lineHeight: moderateScale(20),
+            color: isUserMessage ? theme.colors.userText : theme.colors.aiText,
+            fontFamily: 'System',
+        },
+        strong: {
+            fontWeight: 'bold',
+            color: isUserMessage ? theme.colors.userText : theme.colors.aiText,
+        },
+        emphasis: {
+            fontStyle: 'italic',
+            color: isUserMessage ? theme.colors.userText : theme.colors.aiText,
+        },
+        paragraph: {
+            marginTop: 0,
+            marginBottom: moderateScale(5),
+        },
+    };
 
     return (
         <View style={[
@@ -26,12 +50,13 @@ const MessageItem = ({ item, index }) => {
                     <Image source={{ uri: item.imageUri }} style={styles.messageImage} />
                 )}
                 {item.content && item.content.length > 0 && (
-                    <Text style={isUserMessage ? styles.userMessageText : styles.aiMessageText}>
+                    // <<<--- 3. Thay thế <Text> bằng <Markdown> ---<<<
+                    // Component này sẽ tự động tìm và in đậm các chuỗi như **text**
+                    <Markdown style={markdownStyles}>
                         {item.content}
-                    </Text>
+                    </Markdown>
                 )}
 
-                {/* Hiển thị danh sách sản phẩm nếu có */}
                 {hasProducts && (
                     <View style={styles.productContainer}>
                         <ProductSuggestions products={item.products} />
@@ -67,12 +92,12 @@ const styles = StyleSheet.create({
     userMessageBubble: {
         backgroundColor: theme.colors.userBubble,
         borderWidth: 1,
-        borderColor: '#E6C200', // Viền vàng đậm hơn
+        borderColor: '#E6C200',
     },
     aiMessageBubble: {
         backgroundColor: theme.colors.aiBubble,
         borderWidth: 1,
-        borderColor: '#E0E0E0', // Viền xám nhạt
+        borderColor: '#E0E0E0',
     },
     messageBubbleWithProducts: {
         paddingVertical: verticalScale(10),
@@ -101,7 +126,6 @@ const styles = StyleSheet.create({
     },
 });
 
-// Comparison function để tối ưu memo
 const areEqual = (prevProps, nextProps) => {
     return (
         prevProps.item.role === nextProps.item.role &&
