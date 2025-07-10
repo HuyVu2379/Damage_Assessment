@@ -2,12 +2,14 @@ import React, { useState, memo, useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet, TextInput as RNTextInput } from 'react-native';
 import { TextInput, IconButton, ActivityIndicator } from 'react-native-paper';
 import { moderateScale, verticalScale, scale } from '../utils/scaling';
+import VoiceFeedback from './VoiceFeedback';
 
 const ChatInput = memo(({
     inputText,
     onChangeText,
     isLoading,
     isRecording,
+    isTranscribing,
     onOpenCamera,
     onPickImage,
     onStartRecording,
@@ -17,6 +19,10 @@ const ChatInput = memo(({
     canSend
 }) => {
     const [isFocused, setIsFocused] = useState(false);
+    const [isStopRequested, setIsStopRequested] = useState(false); // Track stop request
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [feedbackType, setFeedbackType] = useState('success');
 
     // Optimize callbacks
     const handleFocus = useCallback(() => setIsFocused(true), []);
@@ -27,6 +33,56 @@ const ChatInput = memo(({
         }
     }, [canSend, isLoading, onSendMessage]);
 
+    // Reset isStopRequested when recording stops
+    React.useEffect(() => {
+        if (!isRecording && !isTranscribing) {
+            setIsStopRequested(false);
+        }
+    }, [isRecording, isTranscribing]);
+
+    // Show feedback when transcription completes
+    React.useEffect(() => {
+        if (!isRecording && !isTranscribing && isStopRequested) {
+            showFeedbackMessage('Hoàn thành nhận diện!', 'success');
+        }
+    }, [isRecording, isTranscribing, isStopRequested, showFeedbackMessage]);
+
+    // Show feedback helper
+    const showFeedbackMessage = useCallback((message, type = 'success') => {
+        setFeedbackMessage(message);
+        setFeedbackType(type);
+        setShowFeedback(true);
+        setTimeout(() => setShowFeedback(false), 2500);
+    }, []);
+
+    // Debug function để kiểm tra state
+    const handleMicPress = useCallback(() => {
+        console.log('🎯 Mic button pressed, current states:', {
+            isRecording,
+            isTranscribing,
+            isLoading,
+            canSend,
+            isStopRequested
+        });
+
+        if (isRecording) {
+            if (isStopRequested) {
+                console.log('⏳ Stop already requested, ignoring...');
+                showFeedbackMessage('Đã nhấn dừng, vui lòng đợi...', 'warning');
+                return;
+            }
+
+            console.log('🛑 Calling onStopRecording...');
+            setIsStopRequested(true); // Immediately set stop requested
+            showFeedbackMessage('Đang dừng ghi âm...', 'success');
+            onStopRecording();
+        } else {
+            console.log('🎙️ Calling onStartRecording...');
+            showFeedbackMessage('Bắt đầu ghi âm...', 'success');
+            onStartRecording();
+        }
+    }, [isRecording, isTranscribing, isLoading, canSend, isStopRequested, onStopRecording, onStartRecording, showFeedbackMessage]);
+
     const isCompact = isFocused || inputText.trim().length > 0;
 
     return (
@@ -34,6 +90,13 @@ const ChatInput = memo(({
             styles.chatInputContainer,
             isCompact && styles.chatInputContainerCompact
         ]}>
+            {/* Voice Feedback */}
+            <VoiceFeedback
+                isVisible={showFeedback}
+                message={feedbackMessage}
+                type={feedbackType}
+            />
+
             {!isCompact && (
                 <>
                     <IconButton
@@ -54,10 +117,10 @@ const ChatInput = memo(({
                     />
                 </>
             )}
-            
+
             <RNTextInput
                 style={[
-                    styles.textInput, 
+                    styles.textInput,
                     { fontSize: moderateScale(14), flex: 1 },
                     isCompact && styles.textInputCompact
                 ]}
@@ -80,15 +143,32 @@ const ChatInput = memo(({
 
             {!isCompact && !canSend && (
                 <TouchableOpacity
-                    onPress={isRecording ? onStopRecording : onStartRecording}
-                    disabled={isLoading}
+                    onPress={handleMicPress}
+                    disabled={isLoading && !isRecording && !isTranscribing}
                     style={[
                         styles.microphoneButton,
-                        isRecording ? styles.microphoneButtonRecording : null
+                        (isRecording || isTranscribing || isStopRequested) ? styles.microphoneButtonRecording : null,
+                        isStopRequested ? styles.microphoneButtonStopping : null
                     ]}
                 >
-                    {isRecording ? (
-                        <ActivityIndicator animating={true} color="white" size="small" />
+                    {isRecording || isTranscribing || isStopRequested ? (
+                        <View style={styles.microphoneContent}>
+                            <ActivityIndicator
+                                animating={true}
+                                color="white"
+                                size="small"
+                            />
+                            {isStopRequested && (
+                                <View style={styles.stoppedIndicator}>
+                                    <IconButton
+                                        icon="check"
+                                        size={moderateScale(12)}
+                                        iconColor="white"
+                                        style={styles.checkIcon}
+                                    />
+                                </View>
+                            )}
+                        </View>
                     ) : (
                         <IconButton
                             icon="microphone"
@@ -105,10 +185,10 @@ const ChatInput = memo(({
                 iconColor={canSend && !isLoading ? '#FFFFFF' : theme.colors.iconPrimary}
                 onPress={handleSend}
                 disabled={isLoading || !canSend}
-                style={canSend && !isLoading ? { 
+                style={canSend && !isLoading ? {
                     backgroundColor: theme.colors.accent,
                     borderRadius: moderateScale(18)
-                } : { 
+                } : {
                     backgroundColor: 'transparent'
                 }}
             />
@@ -171,6 +251,30 @@ const styles = StyleSheet.create({
     },
     microphoneButtonRecording: {
         backgroundColor: '#ff4444',
+    },
+    microphoneButtonStopping: {
+        backgroundColor: '#ff8800', // Orange color to indicate stopping
+    },
+    microphoneContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    stoppedIndicator: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        backgroundColor: '#00aa00',
+        borderRadius: moderateScale(8),
+        width: moderateScale(16),
+        height: moderateScale(16),
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    checkIcon: {
+        margin: 0,
+        padding: 0,
     },
 });
 

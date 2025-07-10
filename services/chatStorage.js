@@ -36,10 +36,16 @@ export const chatStorage = {
             const existingHistory = await chatStorage.getChatHistory();
 
             // Kiểm tra xem cuộc trò chuyện này đã tồn tại chưa (dựa trên tin nhắn đầu tiên)
-            const firstUserMessage = userMessages[0].content;
+            const firstUserMessage = userMessages[0];
             const existingChat = existingHistory.find(chat => {
                 const firstMsg = chat.messages.find(msg => msg.role === 'user');
-                return firstMsg && firstMsg.content === firstUserMessage;
+                if (!firstMsg || !firstUserMessage) return false;
+
+                // So sánh dựa trên content và imageUri (nếu có)
+                const contentMatch = firstMsg.content === firstUserMessage.content;
+                const imageMatch = firstMsg.imageUri === firstUserMessage.imageUri;
+
+                return contentMatch && imageMatch;
             });
 
             if (!existingChat) {

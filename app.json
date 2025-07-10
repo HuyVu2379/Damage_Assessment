@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "AI phát hiện hư hại công trình",
-    "slug": "snack-ef3a89c6-b5a7-4b50-9076-0fff2bda581b",
+    "slug": "bdam",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo.jpg",
@@ -12,7 +12,7 @@
       "android"
     ],
     "splash": {
-      "image": "./assets/splash.svg",
+      "image": "./assets/iconCongTrinh.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -28,15 +28,16 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ],
-      "package": "com.huyvu2379.snackef3a89c6b5a74b5090760fff2bda581b"
+      "package": "com.huyvu.bdam"
     },
     "plugins": [
       "expo-dev-client"
     ],
     "extra": {
       "eas": {
-        "projectId": "22faa20e-0caa-4c15-b9b6-b1b198124380"
+        "projectId": "14c5a358-4719-4136-9f94-8d82dc628c98"
       }
-    }
+    },
+    "owner": "huyvu2379"
   }
 }
